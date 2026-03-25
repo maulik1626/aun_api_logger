@@ -105,6 +105,23 @@ class ApiLoggerInterceptor extends Interceptor {
     if (data == null) return '';
     try {
       if (data is String) return data;
+      if (data is FormData) {
+        final map = <String, dynamic>{};
+        if (data.fields.isNotEmpty) {
+          map['fields'] = Map.fromEntries(
+            data.fields.map((e) => MapEntry(e.key, e.value)),
+          );
+        }
+        if (data.files.isNotEmpty) {
+          map['files'] = data.files
+              .map(
+                (e) =>
+                    '${e.key}: File(${e.value.filename}, ${e.value.length} bytes)',
+              )
+              .toList();
+        }
+        return const JsonEncoder.withIndent('  ').convert(map);
+      }
       return const JsonEncoder.withIndent('  ').convert(data);
     } catch (e) {
       return data.toString();

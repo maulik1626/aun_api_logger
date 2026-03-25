@@ -340,7 +340,12 @@ class DayLogsScreenState extends State<DayLogsScreen> {
             ],
           ),
         ),
-        child: SafeArea(child: _buildBody(true)),
+        child: SafeArea(
+          child: Material(
+            type: MaterialType.transparency,
+            child: _buildBody(true),
+          ),
+        ),
       );
     }
 

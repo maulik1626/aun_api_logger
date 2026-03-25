@@ -1,3 +1,11 @@
+## 1.2.1 - 2026-03-25
+### Added
+- Feature: Added a global share button to `LogItemBlock` allowing users to share an entire API call immediately.
+- Enhancement: Explicitly handle `dio.FormData` in the `ApiLoggerInterceptor`, parsing `fields` and attached `files` seamlessly.
+
+### Fixed
+- Fixed bug on iOS causing "yellow lines" (default missing Material UI fallbacks) by wrapping `CupertinoPageScaffold` elements in explicit `Material` widgets.
+
 ## 1.2.0 - 2026-03-25
 ### Added
 - Implemented fully Adaptive iOS/Android UI constraints. iOS devices now render using native `CupertinoPageScaffold`, `CupertinoSearchTextField`, and `CupertinoActionSheet`.

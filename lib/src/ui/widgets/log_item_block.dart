@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../core/api_log_model.dart';
-import 'copy_share_buttons.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
+import 'copy_share_buttons.dart';
 
 class LogItemBlock extends StatefulWidget {
   final ApiLogModel log;
@@ -197,6 +198,16 @@ class _LogItemBlockState extends State<LogItemBlock> {
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  CopyShareButtons(
+                    contentToCopy: const JsonEncoder.withIndent(
+                      '  ',
+                    ).convert(widget.log.toMap()),
+                    shareText: const JsonEncoder.withIndent(
+                      '  ',
+                    ).convert(widget.log.toMap()),
+                    isIOS: widget.isIOS,
                   ),
                   const SizedBox(width: 8),
                   Icon(
