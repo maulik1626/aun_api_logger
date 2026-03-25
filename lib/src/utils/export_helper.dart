@@ -25,6 +25,7 @@ class ExportHelper {
     await file.writeAsString(jsonString);
 
     // In mobile, sharing a file allows the user to 'Save to Files' or send it
+    // ignore: deprecated_member_use
     await Share.shareXFiles([XFile(file.path)], text: 'API Logs for $dateStr');
   }
 

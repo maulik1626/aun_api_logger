@@ -7,7 +7,7 @@ import '../widgets/log_item_block.dart';
 class DayLogsScreen extends StatefulWidget {
   final String dateStr;
 
-  const DayLogsScreen({Key? key, required this.dateStr}) : super(key: key);
+  const DayLogsScreen({super.key, required this.dateStr});
 
   @override
   DayLogsScreenState createState() => DayLogsScreenState();

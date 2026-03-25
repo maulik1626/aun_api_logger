@@ -7,10 +7,10 @@ class CopyShareButtons extends StatelessWidget {
   final String shareText;
 
   const CopyShareButtons({
-    Key? key,
+    super.key,
     required this.contentToCopy,
     required this.shareText,
-  }) : super(key: key);
+  });
 
   void _copyToClipboard(BuildContext context) {
     if (contentToCopy.isEmpty) return;
@@ -25,6 +25,7 @@ class CopyShareButtons extends StatelessWidget {
 
   void _shareContent() {
     if (shareText.isEmpty) return;
+    // ignore: deprecated_member_use
     Share.share(shareText);
   }
 

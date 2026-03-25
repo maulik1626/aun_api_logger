@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 class LogItemBlock extends StatelessWidget {
   final ApiLogModel log;
 
-  const LogItemBlock({Key? key, required this.log}) : super(key: key);
+  const LogItemBlock({super.key, required this.log});
 
   Color _getStatusColor(int? statusCode) {
     if (statusCode == null) return Colors.grey;
@@ -88,7 +88,7 @@ class LogItemBlock extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(4),
             ),
             child: SelectableText(

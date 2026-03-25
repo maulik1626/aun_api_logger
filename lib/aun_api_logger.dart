@@ -1,5 +1,3 @@
-library aun_api_logger;
-
 export 'src/core/api_logger_core.dart';
 export 'src/interceptors/api_logger_interceptor.dart';
 export 'src/ui/screens/log_dates_screen.dart';
