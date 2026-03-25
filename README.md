@@ -24,7 +24,8 @@ Or from GitHub, if published:
 dependencies:
   aun_api_logger:
     git:
-      url: https://github.com/your-username/aun_api_logger.git
+      url: https://github.com/maulikraja/aun_api_logger.git
+      ref: 1.0.0
 ```
 
 ## Usage
