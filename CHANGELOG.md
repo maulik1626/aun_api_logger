@@ -1,3 +1,9 @@
+## 1.3.1 - 2026-03-25
+### Changed
+- Endpoint paths in FilterChips and log cards now strip the common prefix (e.g. `booking/upcoming_bookings/` instead of `aun_pets_parent/booking/upcoming_bookings/`).
+- Replaced inline copy/share buttons on log card headers with native swipe-to-reveal actions (slide left to show Copy and Share).
+- Removed per-section copy/share buttons from expanded log details for a cleaner look.
+
 ## 1.3.0 - 2026-03-25
 ### Added
 - Feature: Added horizontally sliding `FilterChip` components below the `DayLogsScreen` search bar mapping specifically to all unique paths logged, allowing users distinct "One-Tap Path Filters".

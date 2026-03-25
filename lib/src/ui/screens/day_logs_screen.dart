@@ -1,24 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/api_log_model.dart';
 import '../../storage/local_storage_service.dart';
 import '../../utils/export_helper.dart';
 import '../widgets/log_item_block.dart';
-
-class SpaceToUnderscoreFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.contains(' ')) {
-      final newText = newValue.text.replaceAll(' ', '_');
-      return newValue.copyWith(text: newText, selection: newValue.selection);
-    }
-    return newValue;
-  }
-}
 
 class DayLogsScreen extends StatefulWidget {
   final String dateStr;
@@ -35,6 +20,7 @@ class DayLogsScreenState extends State<DayLogsScreen> {
   List<ApiLogModel> _allLogs = [];
   List<ApiLogModel> _filteredLogs = [];
   List<String> _uniquePaths = [];
+  String _commonPrefix = '';
 
   bool _isLoading = true;
   String _searchQuery = '';
@@ -83,12 +69,48 @@ class DayLogsScreenState extends State<DayLogsScreen> {
     final paths = logs.map((l) => l.endpoint).toSet().toList();
     paths.sort();
 
+    final prefix = _computeCommonPrefix(paths);
+
     setState(() {
       _allLogs = logs;
       _uniquePaths = paths;
+      _commonPrefix = prefix;
       _applyFilters();
       _isLoading = false;
     });
+  }
+
+  String _computeCommonPrefix(List<String> paths) {
+    if (paths.isEmpty) return '';
+    if (paths.length == 1) {
+      final segments = paths.first.split('/');
+      if (segments.length > 2) {
+        return '${segments.sublist(0, segments.length - 2).join('/')}/';
+      }
+      return '';
+    }
+    final splitPaths = paths.map((p) => p.split('/')).toList();
+    final minLen = splitPaths
+        .map((s) => s.length)
+        .reduce((a, b) => a < b ? a : b);
+    final commonSegments = <String>[];
+    for (int i = 0; i < minLen; i++) {
+      final seg = splitPaths.first[i];
+      if (splitPaths.every((s) => s[i] == seg)) {
+        commonSegments.add(seg);
+      } else {
+        break;
+      }
+    }
+    if (commonSegments.isEmpty) return '';
+    return '${commonSegments.join('/')}/';
+  }
+
+  String _trimPath(String fullPath) {
+    if (_commonPrefix.isNotEmpty && fullPath.startsWith(_commonPrefix)) {
+      return fullPath.substring(_commonPrefix.length);
+    }
+    return fullPath;
   }
 
   void _applyFilters() {
@@ -256,7 +278,7 @@ class DayLogsScreenState extends State<DayLogsScreen> {
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
                     label: Text(
-                      path,
+                      _trimPath(path),
                       style: TextStyle(
                         fontSize: 12,
                         color: isSelected ? Colors.white : Colors.black87,
@@ -388,9 +410,13 @@ class DayLogsScreenState extends State<DayLogsScreen> {
                   padding: const EdgeInsets.only(bottom: 24),
                   itemCount: _filteredLogs.length,
                   itemBuilder: (context, index) {
+                    final log = _filteredLogs[index];
                     return LogItemBlock(
-                      log: _filteredLogs[index],
+                      log: log,
                       isIOS: isIOS,
+                      displayEndpoint: _trimPath(
+                        log.endpoint.isNotEmpty ? log.endpoint : log.url,
+                      ),
                     );
                   },
                 ),
