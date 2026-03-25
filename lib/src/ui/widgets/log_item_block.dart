@@ -501,6 +501,7 @@ class _JsonCodeBlockState extends State<JsonCodeBlock> {
               children: [
                 GestureDetector(
                   onTap: () {
+                    HapticFeedback.lightImpact();
                     Clipboard.setData(ClipboardData(text: widget.content));
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -521,7 +522,10 @@ class _JsonCodeBlockState extends State<JsonCodeBlock> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => setState(() => _softWrap = !_softWrap),
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _softWrap = !_softWrap);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: Icon(

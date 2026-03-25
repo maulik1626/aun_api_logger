@@ -29,7 +29,9 @@ dependencies:
       ref: 19760d0d109863cf0d99e4d567eb3ad0fd88095c
 ```
 
-Do not use moving refs like `main`. Whenever the pinned `ref` changes in any app `pubspec.yaml`, update the README code block in the same change.
+Do not use moving refs like `main`.
+
+This block must always reflect the latest intended integration reference. Whenever the pinned `ref` is changed, update this README block and the corresponding `CHANGELOG.md` dependency block in the same change.
 
 ## Usage
 

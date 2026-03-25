@@ -14,5 +14,8 @@ You are an AI assistant working on the `aun_api_logger` Flutter package. You mus
    - App integrations of `aun_api_logger` MUST use a pinned immutable reference (published version, git tag, or commit SHA), never a moving branch reference like `ref: main`.
    - Documentation MUST always include the `pubspec.yaml` dependency code block for `aun_api_logger`.
    - Whenever the dependency reference/version is changed, that README/documentation code block MUST be updated in the same change.
+7. **Changelog Dependency Block (From Current Commit Onward)**:
+   - Starting from the current release entry and for all future entries, each `CHANGELOG.md` version section MUST include a dedicated `dependencies` code block showing the exact `aun_api_logger` git `url` and pinned `ref`.
+   - The dependency block in `CHANGELOG.md` and `README.md` MUST always reflect the latest intended integration reference.
 
 Always check `PRODUCTION_GUIDELINES.md` if you are unsure about the release process.

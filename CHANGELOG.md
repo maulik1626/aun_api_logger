@@ -1,3 +1,19 @@
+## [1.5.2] - 2026-03-25
+### Added
+- Feature: Added haptic feedback on JSON code block copy tap and wrap/unwrap toggle tap in log card details.
+
+### Changed
+- Standardized changelog format from this release onward to include a dedicated dependency reference block.
+
+### Dependencies
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: 19760d0d109863cf0d99e4d567eb3ad0fd88095c
+```
+
 ## 1.5.1 - 2026-03-25
 ### Added
 - Feature: Added dynamic data type indicators to the "Request Body" section block header natively identifying payloads as `(FormData)`, `(JSON)`, or `(FormURLEncoded)` based on the content type header.
