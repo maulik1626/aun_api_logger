@@ -10,5 +10,9 @@ You are an AI assistant working on the `aun_api_logger` Flutter package. You mus
    - `flutter analyze` MUST return 0 warnings/errors. Fix all `info` rules.
    - Absolutely NO `print` or `debugPrint` statements.
 5. **Testing**: New features require tests (`>80%` coverage).
+6. **Dependency Version Pinning & Docs Sync**:
+   - App integrations of `aun_api_logger` MUST use a pinned immutable reference (published version, git tag, or commit SHA), never a moving branch reference like `ref: main`.
+   - Documentation MUST always include the `pubspec.yaml` dependency code block for `aun_api_logger`.
+   - Whenever the dependency reference/version is changed, that README/documentation code block MUST be updated in the same change.
 
 Always check `PRODUCTION_GUIDELINES.md` if you are unsure about the release process.
