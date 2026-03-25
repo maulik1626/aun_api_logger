@@ -1,3 +1,10 @@
+## 1.5.0 - 2026-03-25
+### Changed
+- Replaced static common-prefix stripping with smart dynamic path grouping.
+- Endpoints starting with `aun_*` (e.g. `aun_pets_parent`, `aun_pets_doctor`) automatically have the app name prefix stripped.
+- FilterChips now show top-level group names (e.g. `booking`, `doctor`, `utilities`, `authentication`) instead of full paths.
+- Log card display paths show cleaned endpoints (e.g. `booking/upcoming_bookings/` instead of `aun_pets_parent/booking/upcoming_bookings/`).
+
 ## 1.4.1 - 2026-03-25
 ### Changed
 - Swipe-to-reveal on log cards now shows only Share (removed Copy from swipe).

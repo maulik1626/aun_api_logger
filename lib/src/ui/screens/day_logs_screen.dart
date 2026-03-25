@@ -19,12 +19,11 @@ enum LogFilter { all, get, post, put, delete, success, error }
 class DayLogsScreenState extends State<DayLogsScreen> {
   List<ApiLogModel> _allLogs = [];
   List<ApiLogModel> _filteredLogs = [];
-  List<String> _uniquePaths = [];
-  String _commonPrefix = '';
+  List<String> _uniqueGroups = [];
 
   bool _isLoading = true;
   String _searchQuery = '';
-  String? _selectedPath;
+  String? _selectedGroup;
   LogFilter _currentFilter = LogFilter.all;
 
   final TextEditingController _searchController = TextEditingController();
@@ -66,51 +65,37 @@ class DayLogsScreenState extends State<DayLogsScreen> {
       widget.dateStr,
     );
 
-    final paths = logs.map((l) => l.endpoint).toSet().toList();
-    paths.sort();
-
-    final prefix = _computeCommonPrefix(paths);
+    final groups = logs.map((l) => _getGroupName(l.endpoint)).toSet().toList();
+    groups.sort();
 
     setState(() {
       _allLogs = logs;
-      _uniquePaths = paths;
-      _commonPrefix = prefix;
+      _uniqueGroups = groups;
       _applyFilters();
       _isLoading = false;
     });
   }
 
-  String _computeCommonPrefix(List<String> paths) {
-    if (paths.isEmpty) return '';
-    if (paths.length == 1) {
-      final segments = paths.first.split('/');
-      if (segments.length > 2) {
-        return '${segments.sublist(0, segments.length - 2).join('/')}/';
-      }
-      return '';
+  /// Strips `aun_*` app-name prefix from endpoint paths.
+  /// e.g. `/aun_pets_parent/booking/upcoming/` → `booking/upcoming/`
+  /// e.g. `/utilities/configurator/` → `utilities/configurator/`
+  String _getDisplayPath(String endpoint) {
+    final segments = endpoint.split('/').where((s) => s.isNotEmpty).toList();
+    if (segments.isEmpty) return endpoint;
+    if (segments.first.startsWith('aun_')) {
+      return segments.sublist(1).join('/');
     }
-    final splitPaths = paths.map((p) => p.split('/')).toList();
-    final minLen = splitPaths
-        .map((s) => s.length)
-        .reduce((a, b) => a < b ? a : b);
-    final commonSegments = <String>[];
-    for (int i = 0; i < minLen; i++) {
-      final seg = splitPaths.first[i];
-      if (splitPaths.every((s) => s[i] == seg)) {
-        commonSegments.add(seg);
-      } else {
-        break;
-      }
-    }
-    if (commonSegments.isEmpty) return '';
-    return '${commonSegments.join('/')}/';
+    return segments.join('/');
   }
 
-  String _trimPath(String fullPath) {
-    if (_commonPrefix.isNotEmpty && fullPath.startsWith(_commonPrefix)) {
-      return fullPath.substring(_commonPrefix.length);
-    }
-    return fullPath;
+  /// Gets the top-level group name for filter chips.
+  /// e.g. `/aun_pets_parent/booking/upcoming/` → `booking`
+  /// e.g. `/utilities/configurator/` → `utilities`
+  String _getGroupName(String endpoint) {
+    final display = _getDisplayPath(endpoint);
+    final segments = display.split('/').where((s) => s.isNotEmpty).toList();
+    if (segments.isEmpty) return display;
+    return segments.first;
   }
 
   void _applyFilters() {
@@ -122,8 +107,10 @@ class DayLogsScreenState extends State<DayLogsScreen> {
       }).toList();
     }
 
-    if (_selectedPath != null) {
-      result = result.where((log) => log.endpoint == _selectedPath).toList();
+    if (_selectedGroup != null) {
+      result = result
+          .where((log) => _getGroupName(log.endpoint) == _selectedGroup)
+          .toList();
     }
 
     switch (_currentFilter) {
@@ -260,16 +247,16 @@ class DayLogsScreenState extends State<DayLogsScreen> {
                 ),
         ),
 
-        if (_uniquePaths.isNotEmpty)
+        if (_uniqueGroups.isNotEmpty)
           SizedBox(
             height: 40,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _uniquePaths.length,
+              itemCount: _uniqueGroups.length,
               itemBuilder: (context, index) {
-                final path = _uniquePaths[index];
-                final isSelected = _selectedPath == path;
+                final group = _uniqueGroups[index];
+                final isSelected = _selectedGroup == group;
                 final activeColor = isIOS
                     ? CupertinoColors.activeBlue
                     : Theme.of(context).primaryColor;
@@ -278,7 +265,7 @@ class DayLogsScreenState extends State<DayLogsScreen> {
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
                     label: Text(
-                      _trimPath(path),
+                      group,
                       style: TextStyle(
                         fontSize: 12,
                         color: isSelected ? Colors.white : Colors.black87,
@@ -290,7 +277,7 @@ class DayLogsScreenState extends State<DayLogsScreen> {
                     selected: isSelected,
                     onSelected: (bool selected) {
                       setState(() {
-                        _selectedPath = selected ? path : null;
+                        _selectedGroup = selected ? group : null;
                         _applyFilters();
                       });
                     },
@@ -414,7 +401,7 @@ class DayLogsScreenState extends State<DayLogsScreen> {
                     return LogItemBlock(
                       log: log,
                       isIOS: isIOS,
-                      displayEndpoint: _trimPath(
+                      displayEndpoint: _getDisplayPath(
                         log.endpoint.isNotEmpty ? log.endpoint : log.url,
                       ),
                     );
