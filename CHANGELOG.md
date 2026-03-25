@@ -1,3 +1,9 @@
+## 1.3.0 - 2026-03-25
+### Added
+- Feature: Added horizontally sliding `FilterChip` components below the `DayLogsScreen` search bar mapping specifically to all unique paths logged, allowing users distinct "One-Tap Path Filters".
+- Enhancement: Searching within `DayLogsScreen` now natively restricts to strictly matching the `endpoint` URI rather than conflating matches with URLs.
+- Enhancement: Intercepted typing inside the Search bar; Spaces are now seamlessly replaced dynamically with underscores `_`.
+
 ## 1.2.1 - 2026-03-25
 ### Added
 - Feature: Added a global share button to `LogItemBlock` allowing users to share an entire API call immediately.

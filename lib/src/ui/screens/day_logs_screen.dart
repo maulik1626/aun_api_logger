@@ -1,9 +1,24 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/api_log_model.dart';
 import '../../storage/local_storage_service.dart';
 import '../../utils/export_helper.dart';
 import '../widgets/log_item_block.dart';
+
+class SpaceToUnderscoreFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.contains(' ')) {
+      final newText = newValue.text.replaceAll(' ', '_');
+      return newValue.copyWith(text: newText, selection: newValue.selection);
+    }
+    return newValue;
+  }
+}
 
 class DayLogsScreen extends StatefulWidget {
   final String dateStr;
@@ -19,8 +34,11 @@ enum LogFilter { all, get, post, put, delete, success, error }
 class DayLogsScreenState extends State<DayLogsScreen> {
   List<ApiLogModel> _allLogs = [];
   List<ApiLogModel> _filteredLogs = [];
+  List<String> _uniquePaths = [];
+
   bool _isLoading = true;
   String _searchQuery = '';
+  String? _selectedPath;
   LogFilter _currentFilter = LogFilter.all;
 
   final TextEditingController _searchController = TextEditingController();
@@ -39,6 +57,17 @@ class DayLogsScreenState extends State<DayLogsScreen> {
   }
 
   void _onSearchChanged() {
+    if (_searchController.text.contains(' ')) {
+      final newText = _searchController.text.replaceAll(' ', '_');
+      _searchController.value = _searchController.value.copyWith(
+        text: newText,
+        selection: TextSelection.collapsed(
+          offset: _searchController.selection.end,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _searchQuery = _searchController.text.toLowerCase();
       _applyFilters();
@@ -50,8 +79,13 @@ class DayLogsScreenState extends State<DayLogsScreen> {
     final logs = await LocalStorageService.instance.getLogsByDate(
       widget.dateStr,
     );
+
+    final paths = logs.map((l) => l.endpoint).toSet().toList();
+    paths.sort();
+
     setState(() {
       _allLogs = logs;
+      _uniquePaths = paths;
       _applyFilters();
       _isLoading = false;
     });
@@ -62,10 +96,12 @@ class DayLogsScreenState extends State<DayLogsScreen> {
 
     if (_searchQuery.isNotEmpty) {
       result = result.where((log) {
-        final urlMatch = log.url.toLowerCase().contains(_searchQuery);
-        final endpointMatch = log.endpoint.toLowerCase().contains(_searchQuery);
-        return urlMatch || endpointMatch;
+        return log.endpoint.toLowerCase().contains(_searchQuery);
       }).toList();
+    }
+
+    if (_selectedPath != null) {
+      result = result.where((log) => log.endpoint == _selectedPath).toList();
     }
 
     switch (_currentFilter) {
@@ -111,7 +147,7 @@ class DayLogsScreenState extends State<DayLogsScreen> {
       builder: (BuildContext context) => CupertinoActionSheet(
         title: const Text('Filter Logs'),
         actions: <CupertinoActionSheetAction>[
-          _buildCupertinoAction('All Logs', LogFilter.all),
+          _buildCupertinoAction('All Methods/Statuses', LogFilter.all),
           _buildCupertinoAction('Success (2xx)', LogFilter.success),
           _buildCupertinoAction('Errors (4xx, 5xx)', LogFilter.error),
           _buildCupertinoAction('GET', LogFilter.get),
@@ -161,18 +197,19 @@ class DayLogsScreenState extends State<DayLogsScreen> {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: isIOS
               ? CupertinoSearchTextField(
                   controller: _searchController,
-                  placeholder: 'Search endpoint or URL...',
+                  placeholder: 'Search exact endpoints...',
                 )
               : TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search endpoint or URL...',
+                    hintText: 'Search exact endpoints...',
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
@@ -200,11 +237,65 @@ class DayLogsScreenState extends State<DayLogsScreen> {
                   ),
                 ),
         ),
+
+        if (_uniquePaths.isNotEmpty)
+          SizedBox(
+            height: 40,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _uniquePaths.length,
+              itemBuilder: (context, index) {
+                final path = _uniquePaths[index];
+                final isSelected = _selectedPath == path;
+                final activeColor = isIOS
+                    ? CupertinoColors.activeBlue
+                    : Theme.of(context).primaryColor;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    label: Text(
+                      path,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isSelected ? Colors.white : Colors.black87,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    selected: isSelected,
+                    onSelected: (bool selected) {
+                      setState(() {
+                        _selectedPath = selected ? path : null;
+                        _applyFilters();
+                      });
+                    },
+                    showCheckmark: false,
+                    backgroundColor: isIOS
+                        ? CupertinoColors.systemGrey6
+                        : Colors.grey.shade100,
+                    selectedColor: activeColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                      side: BorderSide(
+                        color: isSelected
+                            ? Colors.transparent
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
         if (_allLogs.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 16.0,
-              vertical: 4.0,
+              vertical: 8.0,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -248,7 +339,7 @@ class DayLogsScreenState extends State<DayLogsScreen> {
                         <PopupMenuEntry<LogFilter>>[
                           const PopupMenuItem<LogFilter>(
                             value: LogFilter.all,
-                            child: Text('All Logs'),
+                            child: Text('All Methods/Statuses'),
                           ),
                           const PopupMenuItem<LogFilter>(
                             value: LogFilter.success,
