@@ -38,7 +38,7 @@ class _LogItemBlockState extends State<LogItemBlock>
     );
     _slideAnimation = Tween<Offset>(
       begin: Offset.zero,
-      end: const Offset(-0.3, 0),
+      end: const Offset(-0.15, 0),
     ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
   }
 
@@ -55,21 +55,6 @@ class _LogItemBlockState extends State<LogItemBlock>
       _slideController.forward();
     }
     _isSlid = !_isSlid;
-  }
-
-  void _copyToClipboard(BuildContext context) {
-    final content = const JsonEncoder.withIndent(
-      '  ',
-    ).convert(widget.log.toMap());
-    Clipboard.setData(ClipboardData(text: content));
-    _slideController.reverse();
-    _isSlid = false;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Copied to clipboard'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _shareLog() {
@@ -141,42 +126,12 @@ class _LogItemBlockState extends State<LogItemBlock>
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 GestureDetector(
-                  onTap: () => _copyToClipboard(context),
+                  onTap: _shareLog,
                   child: Container(
                     width: 60,
                     color: widget.isIOS
                         ? CupertinoColors.activeBlue
                         : Colors.blue,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          widget.isIOS
-                              ? CupertinoIcons.doc_on_doc
-                              : Icons.copy_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Copy',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: _shareLog,
-                  child: Container(
-                    width: 60,
-                    color: widget.isIOS
-                        ? CupertinoColors.activeGreen
-                        : Colors.green,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -514,22 +469,48 @@ class _JsonCodeBlockState extends State<JsonCodeBlock> {
         children: [
           Align(
             alignment: Alignment.topRight,
-            child: GestureDetector(
-              onTap: () => setState(() => _softWrap = !_softWrap),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Icon(
-                  _softWrap
-                      ? (widget.isIOS
-                            ? CupertinoIcons.arrow_right_arrow_left
-                            : Icons.wrap_text_rounded)
-                      : (widget.isIOS
-                            ? CupertinoIcons.text_alignleft
-                            : Icons.short_text_rounded),
-                  size: 18,
-                  color: Colors.grey.shade600,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: widget.content));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Copied to clipboard'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Icon(
+                      widget.isIOS
+                          ? CupertinoIcons.doc_on_doc
+                          : Icons.copy_rounded,
+                      size: 18,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
                 ),
-              ),
+                GestureDetector(
+                  onTap: () => setState(() => _softWrap = !_softWrap),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Icon(
+                      _softWrap
+                          ? (widget.isIOS
+                                ? CupertinoIcons.arrow_right_arrow_left
+                                : Icons.wrap_text_rounded)
+                          : (widget.isIOS
+                                ? CupertinoIcons.text_alignleft
+                                : Icons.short_text_rounded),
+                      size: 18,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Padding(

@@ -1,3 +1,8 @@
+## 1.4.1 - 2026-03-25
+### Changed
+- Swipe-to-reveal on log cards now shows only Share (removed Copy from swipe).
+- Added a Copy icon in the top-right of each JSON code block, placed before the wrap/unwrap toggle.
+
 ## 1.4.0 - 2026-03-25
 ### Added
 - Feature: JSON syntax highlighting in log data blocks — keys (teal), string values (amber), numbers (purple), booleans/null (red), and brackets (grey).
