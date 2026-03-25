@@ -1,3 +1,7 @@
+## 1.5.1 - 2026-03-25
+### Added
+- Feature: Added dynamic data type indicators to the "Request Body" section block header natively identifying payloads as `(FormData)`, `(JSON)`, or `(FormURLEncoded)` based on the content type header.
+
 ## 1.5.0 - 2026-03-25
 ### Changed
 - Replaced static common-prefix stripping with smart dynamic path grouping.

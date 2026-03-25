@@ -83,6 +83,33 @@ class _LogItemBlockState extends State<LogItemBlock>
     return CupertinoColors.systemRed;
   }
 
+  String _getRequestBodyType() {
+    try {
+      if (widget.log.requestHeaders == null ||
+          widget.log.requestHeaders!.isEmpty) {
+        return '';
+      }
+      final headers =
+          jsonDecode(widget.log.requestHeaders!) as Map<String, dynamic>;
+
+      String contentType = '';
+      headers.forEach((key, value) {
+        if (key.toLowerCase() == 'content-type') {
+          contentType = value.toString().toLowerCase();
+        }
+      });
+
+      if (contentType.contains('multipart/form-data')) {
+        return ' (FormData)';
+      } else if (contentType.contains('application/json')) {
+        return ' (JSON)';
+      } else if (contentType.contains('application/x-www-form-urlencoded')) {
+        return ' (FormURLEncoded)';
+      }
+    } catch (_) {}
+    return '';
+  }
+
   Widget _buildSection(String title, String? content) {
     if (content == null || content.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -319,7 +346,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                               widget.log.requestHeaders,
                             ),
                             _buildSection(
-                              'Request Body',
+                              'Request Body${_getRequestBodyType()}',
                               widget.log.requestBody,
                             ),
                             _buildSection(
