@@ -1,3 +1,9 @@
+## 1.4.0 - 2026-03-25
+### Added
+- Feature: JSON syntax highlighting in log data blocks — keys (teal), string values (amber), numbers (purple), booleans/null (red), and brackets (grey).
+- Feature: Code blocks default to unwrapped mode with horizontal scrolling.
+- Feature: Wrap/unwrap toggle icon in the top-right of each data block.
+
 ## 1.3.1 - 2026-03-25
 ### Changed
 - Endpoint paths in FilterChips and log cards now strip the common prefix (e.g. `booking/upcoming_bookings/` instead of `aun_pets_parent/booking/upcoming_bookings/`).

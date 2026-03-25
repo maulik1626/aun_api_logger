@@ -114,22 +114,7 @@ class _LogItemBlockState extends State<LogItemBlock>
             ),
           ),
           const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: SelectableText(
-              content,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 12,
-                color: Colors.grey.shade800,
-              ),
-            ),
-          ),
+          JsonCodeBlock(content: content, isIOS: widget.isIOS),
         ],
       ),
     );
@@ -397,6 +382,180 @@ class _LogItemBlockState extends State<LogItemBlock>
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class JsonCodeBlock extends StatefulWidget {
+  final String content;
+  final bool isIOS;
+
+  const JsonCodeBlock({super.key, required this.content, required this.isIOS});
+
+  @override
+  State<JsonCodeBlock> createState() => _JsonCodeBlockState();
+}
+
+class _JsonCodeBlockState extends State<JsonCodeBlock> {
+  bool _softWrap = false;
+
+  // JSON syntax colors
+  static const _keyColor = Color(0xFF00897B); // teal
+  static const _stringColor = Color(0xFFF57F17); // amber
+  static const _numberColor = Color(0xFF7B1FA2); // purple
+  static const _boolNullColor = Color(0xFFD32F2F); // red
+  static const _bracketColor = Color(0xFF757575); // grey
+  static const _defaultColor = Color(0xFF424242);
+
+  List<TextSpan> _highlightJson(String text) {
+    final spans = <TextSpan>[];
+    final regex = RegExp(
+      r'("(?:[^"\\]|\\.)*")\s*(:)|("(?:[^"\\]|\\.)*")|([-+]?\d+\.?\d*(?:[eE][+-]?\d+)?)|(\btrue\b|\bfalse\b|\bnull\b)|([\[\]{}:,])',
+    );
+
+    int lastEnd = 0;
+    for (final match in regex.allMatches(text)) {
+      if (match.start > lastEnd) {
+        spans.add(
+          TextSpan(
+            text: text.substring(lastEnd, match.start),
+            style: const TextStyle(color: _defaultColor),
+          ),
+        );
+      }
+
+      if (match.group(1) != null) {
+        // Key
+        spans.add(
+          TextSpan(
+            text: match.group(1),
+            style: const TextStyle(
+              color: _keyColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+        spans.add(
+          TextSpan(
+            text: match.group(2),
+            style: const TextStyle(color: _bracketColor),
+          ),
+        );
+      } else if (match.group(3) != null) {
+        // String value
+        spans.add(
+          TextSpan(
+            text: match.group(3),
+            style: const TextStyle(color: _stringColor),
+          ),
+        );
+      } else if (match.group(4) != null) {
+        // Number
+        spans.add(
+          TextSpan(
+            text: match.group(4),
+            style: const TextStyle(
+              color: _numberColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        );
+      } else if (match.group(5) != null) {
+        // Boolean / null
+        spans.add(
+          TextSpan(
+            text: match.group(5),
+            style: const TextStyle(
+              color: _boolNullColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      } else if (match.group(6) != null) {
+        // Brackets, commas, colons
+        spans.add(
+          TextSpan(
+            text: match.group(6),
+            style: const TextStyle(color: _bracketColor),
+          ),
+        );
+      }
+
+      lastEnd = match.end;
+    }
+
+    if (lastEnd < text.length) {
+      spans.add(
+        TextSpan(
+          text: text.substring(lastEnd),
+          style: const TextStyle(color: _defaultColor),
+        ),
+      );
+    }
+
+    return spans;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final highlighted = _highlightJson(widget.content);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: GestureDetector(
+              onTap: () => setState(() => _softWrap = !_softWrap),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Icon(
+                  _softWrap
+                      ? (widget.isIOS
+                            ? CupertinoIcons.arrow_right_arrow_left
+                            : Icons.wrap_text_rounded)
+                      : (widget.isIOS
+                            ? CupertinoIcons.text_alignleft
+                            : Icons.short_text_rounded),
+                  size: 18,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            child: _softWrap
+                ? SelectableText.rich(
+                    TextSpan(
+                      children: highlighted,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                : SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SelectableText.rich(
+                      TextSpan(
+                        children: highlighted,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
           ),
         ],
       ),
