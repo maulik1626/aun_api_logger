@@ -26,7 +26,7 @@ dependencies:
   aun_api_logger:
     git:
       url: https://github.com/maulik1626/aun_api_logger.git
-      ref: 0cbda37f8c5510bdaafc6c7e369406176e8e6b5d
+      ref: 2f5ae92e5deb40f0db8dc93509a9664a21f26ae6
 ```
 
 Do not use moving refs like `main`.
