@@ -32,13 +32,13 @@ dependencies:
   aun_api_logger:
     git:
       url: https://github.com/maulik1626/aun_api_logger.git
-      ref: <pushed-commit-sha>
+      ref: <version-git-tag>
 ```
 ```
 
-Every version entry **MUST** include a `### Dependencies` section with a dedicated yaml code block containing the exact git `url` and pinned `ref` (commit SHA) for that version. The `ref` must be the actual pushed commit SHA that contains that version's code changes. The `README.md` dependency block must always reflect the latest version's ref.
+Every version entry **MUST** include a `### Dependencies` section with a dedicated yaml code block containing the exact git `url` and pinned `ref` (version git tag) for that version. The `ref` must be the actual pushed version git tag that contains that version's code changes. The `README.md` dependency block must always reflect the latest version's ref.
 
-**Workflow**: After committing and pushing a version bump, immediately update `CHANGELOG.md` and `README.md` with the pushed commit SHA, then commit and push the ref update.
+**Workflow**: After committing and pushing a version bump, immediately update `CHANGELOG.md` and `README.md` with the pushed version git tag, then commit and push the ref update.
 
 **Never** publish a change without detailing it in the CHANGELOG.
 

@@ -19,19 +19,19 @@ dependencies:
     path: ../aun_api_logger
 ```
 
-Or from GitHub, pin to an immutable ref (tag or commit SHA):
+Or from GitHub, pin to an immutable ref (tag):
 
 ```yaml
 dependencies:
   aun_api_logger:
     git:
       url: https://github.com/maulik1626/aun_api_logger.git
-      ref: 2f5ae92e5deb40f0db8dc93509a9664a21f26ae6
+      ref: v1.5.2
 ```
 
 Do not use moving refs like `main`.
 
-This block must always reflect the latest intended integration reference. Whenever the pinned `ref` is changed, update this README block and the corresponding `CHANGELOG.md` dependency block in the same change.
+This block must always display the latest released version tag. Whenever the pinned `ref` is changed, update this README block and the corresponding `CHANGELOG.md` dependency block in the same change.
 
 ## Usage
 

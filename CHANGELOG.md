@@ -15,7 +15,7 @@ dependencies:
   aun_api_logger:
     git:
       url: https://github.com/maulik1626/aun_api_logger.git
-      ref: 2f5ae92e5deb40f0db8dc93509a9664a21f26ae6
+      ref: v1.5.2
 ```
 
 ## 1.5.1 - 2026-03-25
