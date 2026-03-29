@@ -1,3 +1,25 @@
+## 1.9.0 - 2026-03-29
+
+### Added
+
+- **Adaptive share sheet** after swipe → **Share**: **iOS** uses `CupertinoActionSheet`; **Android** uses a Material modal bottom sheet with drag handle. Choose **without auth tokens** (headers redacted in PDF) or **full data** (includes captured tokens), then the system share sheet opens as before.
+
+### Changed
+
+- PDF sharing is initiated only from the **swipe-revealed Share** control (no long-press share menu). Share-related **haptic** feedback on open was removed per product direction.
+- Log card **header** uses `GestureDetector` instead of `InkWell`; **card drop shadow** and Material **surface tint** are cleared for a flatter row.
+- **Collapse expanded** log rows before generating/sharing the PDF when needed, so the share flow is reliable on smaller viewports.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.9.0
+```
+
 ## 1.8.1 - 2026-03-29
 
 ### Changed

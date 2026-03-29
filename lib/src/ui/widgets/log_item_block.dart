@@ -63,6 +63,16 @@ class _LogItemBlockState extends State<LogItemBlock>
     _isSlid = !_isSlid;
   }
 
+  /// Sharing while expanded breaks the share sheet on some devices; collapse first.
+  Future<void> _collapseForShareIfNeeded() async {
+    if (!_isExpanded || !mounted) {
+      return;
+    }
+    setState(() => _isExpanded = false);
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+  }
+
   Future<void> _shareLog({bool withAuth = false}) async {
     if (_shareInProgress) {
       return;
@@ -70,6 +80,11 @@ class _LogItemBlockState extends State<LogItemBlock>
     _shareInProgress = true;
     File? pdfFile;
     try {
+      await _collapseForShareIfNeeded();
+      if (!mounted) {
+        return;
+      }
+
       // Create a copy of the log data
       ApiLogModel shareLog = ApiLogModel(
         id: widget.log.id,
@@ -143,6 +158,120 @@ class _LogItemBlockState extends State<LogItemBlock>
     }
   }
 
+  /// Swipe → Share: adaptive sheet to pick PDF with or without auth headers.
+  Future<void> _showAdaptiveShareSheet() async {
+    if (!mounted) return;
+
+    if (widget.isIOS) {
+      await showCupertinoModalPopup<void>(
+        context: context,
+        builder: (BuildContext ctx) => CupertinoActionSheet(
+          title: const Text('Share log'),
+          message: const Text(
+            'PDF will include request headers and bodies. Choose whether auth tokens are included.',
+          ),
+          actions: <Widget>[
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _shareLog(withAuth: false);
+              },
+              child: const Text('Share without auth tokens'),
+            ),
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _shareLog(withAuth: true);
+              },
+              child: const Text('Share full data (with tokens)'),
+            ),
+          ],
+          cancelButton: CupertinoActionSheetAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+        ),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: Text(
+                    'Share log',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'PDF includes headers and bodies. Choose whether auth tokens are included.',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Icon(
+                    Icons.shield_outlined,
+                    color: Colors.blue.shade700,
+                  ),
+                  title: const Text(
+                    'Without auth tokens',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Authorization and similar headers are redacted in the PDF.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _shareLog(withAuth: false);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.key_outlined,
+                    color: Colors.orange.shade800,
+                  ),
+                  title: const Text(
+                    'Full data',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Includes sensitive headers as captured.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _shareLog(withAuth: true);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSection(String title, String? content) {
     if (content == null || content.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -176,6 +305,9 @@ class _LogItemBlockState extends State<LogItemBlock>
 
     final card = Material(
       color: Colors.transparent,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
       child: Container(
         width: MediaQuery.of(context).size.width - 32,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -189,7 +321,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   GestureDetector(
-                    onTap: () => _shareLog(withAuth: false),
+                    onTap: _showAdaptiveShareSheet,
                     child: Container(
                       width: 60,
                       color: widget.isIOS
@@ -247,22 +379,12 @@ class _LogItemBlockState extends State<LogItemBlock>
                           ? CupertinoColors.systemGrey5
                           : Colors.grey.shade200,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      InkWell(
-                        splashColor: Colors.transparent,
-                        highlightColor: Colors.transparent,
-                        hoverColor: Colors.transparent,
-                        splashFactory: NoSplash.splashFactory,
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: () {
                           if (_isSlid) {
                             _toggleSlide();
@@ -419,119 +541,8 @@ class _LogItemBlockState extends State<LogItemBlock>
       ),
     );
 
-    if (widget.isIOS) {
-      // Must use [child: card], not [CupertinoContextMenu.builder] with a
-      // duplicate collapsed widget — the interactive card (InkWell expand) must
-      // be the one in the tree. The default preview uses FittedBox when the menu
-      // opens; if long-press asserts on a very tall expanded card, collapse the
-      // row first or use the Android-style sheet.
-      return CupertinoContextMenu(
-        enableHapticFeedback: true,
-        actions: <Widget>[
-          CupertinoContextMenuAction(
-            onPressed: () {
-              Navigator.pop(context);
-              _shareLog(withAuth: false);
-            },
-            trailingIcon: CupertinoIcons.share,
-            child: const Text('Share (Without Auth)'),
-          ),
-          CupertinoContextMenuAction(
-            onPressed: () {
-              Navigator.pop(context);
-              _shareLog(withAuth: true);
-            },
-            trailingIcon: CupertinoIcons.share_solid,
-            child: const Text('Share (Full Data)'),
-          ),
-        ],
-        child: card,
-      );
-    } else {
-      return GestureDetector(
-        onLongPress: () {
-          showModalBottomSheet(
-            context: context,
-            backgroundColor: Colors.white,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            builder: (BuildContext context) {
-              return SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.share_rounded,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                        title: const Text(
-                          'Share (Without Auth)',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: const Text(
-                          'Removes authorization tokens',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _shareLog(withAuth: false);
-                        },
-                      ),
-                      ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.share_rounded,
-                            color: Colors.red.shade700,
-                          ),
-                        ),
-                        title: const Text(
-                          'Share (Full Data)',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: const Text(
-                          'Includes all sensitive headers',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _shareLog(withAuth: true);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-        child: card,
-      );
-    }
+    // PDF share only via swipe → Share (see background [GestureDetector] above).
+    return card;
   }
 }
 
