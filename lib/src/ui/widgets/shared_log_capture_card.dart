@@ -314,6 +314,7 @@ class _ShareCodeBlock extends StatelessWidget {
           ),
         ),
         softWrap: true,
+        overflow: TextOverflow.clip,
       ),
     );
   }

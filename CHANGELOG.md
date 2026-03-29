@@ -1,3 +1,20 @@
+## 1.9.5 - 2026-03-29
+
+### Fixed
+
+- **Shared PDF content clipped / overflowing**: The share screenshot no longer adds an outer grey padding container. The card is now captured at exactly the on-screen card width (`screen width - 32`) using a tight `BoxConstraints` and `ClipRect`, preventing any content overflow from leaking into the image.
+- **Long text soft-wrap in share card**: `RichText` in the share-only code block now sets `overflow: TextOverflow.clip` so content that cannot wrap at word boundaries (e.g. long URLs) is clipped at the card boundary instead of escaping it.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.9.5
+```
+
 ## 1.9.4 - 2026-03-29
 
 ### Fixed

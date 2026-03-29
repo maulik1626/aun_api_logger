@@ -162,9 +162,7 @@ class _LogItemBlockState extends State<LogItemBlock>
       const capturePixelRatio = 2.0;
       final controller = ScreenshotController();
       final Uint8List pngBytes = await controller.captureFromLongWidget(
-        Container(
-          color: const Color(0xFFF5F7FB),
-          padding: const EdgeInsets.all(16),
+        ClipRect(
           child: SizedBox(
             width: captureWidth,
             child: SharedLogCaptureCard(
@@ -176,7 +174,10 @@ class _LogItemBlockState extends State<LogItemBlock>
         context: context,
         delay: const Duration(milliseconds: 300),
         pixelRatio: capturePixelRatio,
-        constraints: BoxConstraints(maxWidth: captureWidth + 32),
+        constraints: BoxConstraints(
+          minWidth: captureWidth,
+          maxWidth: captureWidth,
+        ),
       );
 
       pdfFile = await PdfShareHelper.generatePdfFromImageBytes(
