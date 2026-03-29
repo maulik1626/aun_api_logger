@@ -2,15 +2,13 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:screenshot/screenshot.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/api_log_model.dart';
 import '../../utils/color_helper.dart';
 import '../../utils/log_helper.dart';
+import '../../utils/pdf_share_helper.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
-import 'shared_log_card_widget.dart';
 class LogItemBlock extends StatefulWidget {
   final ApiLogModel log;
   final bool isIOS;
@@ -64,9 +62,7 @@ class _LogItemBlockState extends State<LogItemBlock>
 
   Future<void> _shareLog({bool withAuth = false}) async {
     try {
-      final ScreenshotController screenshotController = ScreenshotController();
-      
-      // Clone log
+      // Create a copy of the log data
       ApiLogModel shareLog = ApiLogModel(
         id: widget.log.id,
         method: widget.log.method,
@@ -99,40 +95,22 @@ class _LogItemBlockState extends State<LogItemBlock>
         } catch (_) {}
       }
 
-      // Capture Image
-      final Uint8List? imageBytes = await screenshotController.captureFromWidget(
-        Material(
-          color: Colors.transparent,
-          child: SingleChildScrollView(
-            child: SharedLogCardWidget(log: shareLog, displayEndpoint: widget.displayEndpoint),
-          ),
-        ),
-        delay: const Duration(milliseconds: 100),
-        pixelRatio: 2.5,
-        context: context,
+      // Generate PDF
+      final File pdfFile = await PdfShareHelper.generatePdf(
+        shareLog,
+        widget.displayEndpoint,
       );
 
-      if (imageBytes != null) {
-        final directory = await getTemporaryDirectory();
-        final imageFile = File('${directory.path}/shared_log_${DateTime.now().millisecondsSinceEpoch}.png');
-        await imageFile.writeAsBytes(imageBytes);
+      final String shareText = _buildShareText(shareLog);
 
-        final String shareText = _buildShareText(shareLog);
-        
-        // ignore: deprecated_member_use
-        await Share.shareXFiles([XFile(imageFile.path)], text: shareText);
+      // ignore: deprecated_member_use
+      await Share.shareXFiles([XFile(pdfFile.path)], text: shareText);
 
-        Future.delayed(const Duration(seconds: 5), () {
-          if (imageFile.existsSync()) {
-            try { imageFile.deleteSync(); } catch (_) {}
-          }
-        });
-      } else {
-        // Fallback to text only
-        final String shareText = _buildShareText(shareLog);
-        // ignore: deprecated_member_use
-        await Share.share(shareText);
-      }
+      Future.delayed(const Duration(seconds: 10), () {
+        if (pdfFile.existsSync()) {
+          try { pdfFile.deleteSync(); } catch (_) {}
+        }
+      });
     } catch (e) {
       debugPrint('Share Error: $e');
     }

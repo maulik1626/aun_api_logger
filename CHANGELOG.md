@@ -1,3 +1,13 @@
+## 1.7.0 - 2026-03-30
+
+### Changed
+
+- **BREAKING**: Replaced screenshot-based image sharing with PDF generation for API log sharing.
+- Shared PDFs are A4 width, single continuous page (no page breaks), with full soft-wrapped content.
+- PDF files are named descriptively: `{METHOD}_{endpoint}_{hh-mm-ss_AM/PM}.pdf`.
+- Color-coded HTTP method badge and status code in the PDF.
+- Removed `screenshot` dependency; added `pdf` dependency.
+
 ## 1.6.3 - 2026-03-30
 
 ### Fixed
