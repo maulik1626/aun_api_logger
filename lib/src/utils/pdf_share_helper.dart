@@ -8,14 +8,17 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 class PdfShareHelper {
-  static const double _pageWidthPt = 420;
-
   /// Wraps the already-rendered share screenshot into a single-page PDF.
+  ///
+  /// [pixelRatio] must match the value used when capturing the screenshot so
+  /// that the PDF page dimensions map 1-to-1 to the original logical-pixel
+  /// size of the widget, preventing the content from appearing zoomed.
   static Future<File> generatePdfFromImageBytes({
     required Uint8List imageBytes,
     required String method,
     required String displayEndpoint,
     required int requestTime,
+    double pixelRatio = 1.0,
   }) async {
     final timeStr = DateFormat(
       'hh-mm-ss_a',
@@ -27,15 +30,17 @@ class PdfShareHelper {
     final fileName = '${method}_${endpointSlug}_$timeStr.pdf';
 
     final imageSize = await _decodeImageSize(imageBytes);
-    final pageHeight = (_pageWidthPt * (imageSize.height / imageSize.width))
-        .clamp(320.0, 20000.0);
+    // Divide by pixelRatio to recover logical pixel dimensions — these become
+    // the PDF page dimensions in points so the content is not zoomed vs screen.
+    final pageWidth = (imageSize.width / pixelRatio).clamp(280.0, 2000.0);
+    final pageHeight = (imageSize.height / pixelRatio).clamp(320.0, 20000.0);
 
     final pdf = pw.Document();
     final image = pw.MemoryImage(imageBytes);
     pdf.addPage(
       pw.Page(
         margin: pw.EdgeInsets.zero,
-        pageFormat: PdfPageFormat(_pageWidthPt, pageHeight),
+        pageFormat: PdfPageFormat(pageWidth, pageHeight),
         build: (pw.Context context) {
           return pw.SizedBox.expand(
             child: pw.Image(image, fit: pw.BoxFit.fill),

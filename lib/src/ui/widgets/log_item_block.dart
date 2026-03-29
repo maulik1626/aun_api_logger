@@ -159,6 +159,7 @@ class _LogItemBlockState extends State<LogItemBlock>
 
       final mediaQuery = MediaQuery.of(context);
       final captureWidth = (mediaQuery.size.width - 32).clamp(280.0, 600.0);
+      const capturePixelRatio = 2.0;
       final controller = ScreenshotController();
       final Uint8List pngBytes = await controller.captureFromLongWidget(
         Container(
@@ -174,7 +175,7 @@ class _LogItemBlockState extends State<LogItemBlock>
         ),
         context: context,
         delay: const Duration(milliseconds: 300),
-        pixelRatio: 2,
+        pixelRatio: capturePixelRatio,
         constraints: BoxConstraints(maxWidth: captureWidth + 32),
       );
 
@@ -183,6 +184,7 @@ class _LogItemBlockState extends State<LogItemBlock>
         method: shareLog.method,
         displayEndpoint: widget.displayEndpoint,
         requestTime: shareLog.requestTime,
+        pixelRatio: capturePixelRatio,
       );
 
       await SharePlus.instance.share(

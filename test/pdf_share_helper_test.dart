@@ -30,6 +30,7 @@ void main() {
     });
 
     test('wraps a PNG screenshot into a single-page PDF', () async {
+      // The test PNG is 120×160 px, simulating a 2× capture of a 60×80 pt widget.
       final imageBytes = await _buildTestPngBytes();
 
       final file = await PdfShareHelper.generatePdfFromImageBytes(
@@ -37,6 +38,7 @@ void main() {
         method: 'POST',
         displayEndpoint: '/v1/auth',
         requestTime: 1_711_200_000_000,
+        pixelRatio: 2.0,
       );
       final bytes = await file.readAsBytes();
       expect(bytes.length, greaterThan(100));

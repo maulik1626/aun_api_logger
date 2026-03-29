@@ -1,3 +1,19 @@
+## 1.9.4 - 2026-03-29
+
+### Fixed
+
+- **Shared PDF zoomed in**: The PDF page was a fixed 420 pt wide regardless of the device screen width, making the screenshot content appear larger than it does on screen. The page dimensions are now derived from the screenshot image size divided by the capture pixel ratio, so the PDF content renders at exactly the same physical size as the on-screen card.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.9.4
+```
+
 ## 1.9.3 - 2026-03-29
 
 ### Changed
