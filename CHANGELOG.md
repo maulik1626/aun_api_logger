@@ -1,3 +1,29 @@
+## 1.8.0 - 2026-03-29
+
+### Added
+
+- PDF export embeds **Noto Sans** (Regular & Bold) from bundled assets for broad Unicode coverage and to avoid default Helvetica limitations (see `assets/fonts/README.txt` for OFL attribution).
+
+### Changed
+
+- Shared log PDF is a **single continuous page** whose height is estimated from the log content (expanded-card style layout). **No A4 format, no MultiPage pagination.**
+- JSON blocks in the PDF use **syntax highlighting** (keys, strings, numbers, booleans, punctuation) aligned with the in-app `JsonCodeBlock` colors.
+
+### Fixed
+
+- Share reliability: ignores overlapping share actions while a share is already running; failed shares show a **SnackBar**; temporary PDF files are deleted after **30s** (was 10s) so the OS has time to read the file.
+- iOS: log row uses **`CupertinoContextMenu(child: card)`** so the **header remains tappable** to expand/collapse details (the interactive card must be the context-menu child).
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.8.0
+```
+
 ## 1.7.2 - 2026-03-29
 
 ### Fixed

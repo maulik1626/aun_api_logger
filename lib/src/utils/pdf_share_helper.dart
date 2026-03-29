@@ -2,14 +2,22 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
-import 'package:intl/intl.dart';
 
 import '../core/api_log_model.dart';
+import 'pdf_json_syntax.dart';
 
 class PdfShareHelper {
+  static const double _pageWidthPt = 420;
+  static const double _marginPt = 20;
+  static const double _cardPaddingPt = 20;
+  static const double _codeFontSize = 9;
+  static const double _lineHeightPt = 11;
+
   static PdfColor getMethodPdfColor(String? method) {
     if (method == null) return PdfColors.grey;
     switch (method.toUpperCase()) {
@@ -35,11 +43,29 @@ class PdfShareHelper {
     return PdfColors.red;
   }
 
-  /// Generates a PDF file from the given log and returns the File.
+  static Future<pw.ThemeData> _loadTheme() async {
+    try {
+      final regular = await rootBundle.load(
+        'packages/aun_api_logger/assets/fonts/NotoSans-Regular.ttf',
+      );
+      final bold = await rootBundle.load(
+        'packages/aun_api_logger/assets/fonts/NotoSans-Bold.ttf',
+      );
+      return pw.ThemeData.withFont(
+        base: pw.Font.ttf(regular),
+        bold: pw.Font.ttf(bold),
+      );
+    } catch (_) {
+      return pw.ThemeData.base();
+    }
+  }
+
+  /// One continuous page sized to fit the expanded-log layout (no A4 / no pagination).
   static Future<File> generatePdf(
     ApiLogModel log,
     String displayEndpoint,
   ) async {
+    final theme = await _loadTheme();
     final methodColor = getMethodPdfColor(log.method);
     final statusColor = getStatusPdfColor(log.statusCode);
 
@@ -50,22 +76,20 @@ class PdfShareHelper {
       'hh:mm:ss a',
     ).format(DateTime.fromMillisecondsSinceEpoch(log.requestTime));
 
-    // Build sanitized filename
     final endpointSlug = displayEndpoint
         .replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_')
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
     final fileName = '${log.method}_${endpointSlug}_$timeStr.pdf';
 
-    // Build PDF content widgets
-    final List<pw.Widget> content = [];
+    final innerWidth = _pageWidthPt - (_marginPt * 2) - (_cardPaddingPt * 2);
 
-    // --- Header section ---
+    final content = <pw.Widget>[];
+
     content.add(
       pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          // Left color bar
           pw.Container(
             width: 5,
             height: 50,
@@ -81,7 +105,6 @@ class PdfShareHelper {
               children: [
                 pw.Row(
                   children: [
-                    // Method badge
                     pw.Container(
                       padding: const pw.EdgeInsets.symmetric(
                         horizontal: 8,
@@ -101,7 +124,6 @@ class PdfShareHelper {
                       ),
                     ),
                     pw.SizedBox(width: 10),
-                    // Status code
                     pw.Text(
                       log.statusCode?.toString() ?? 'PENDING',
                       style: pw.TextStyle(
@@ -111,7 +133,6 @@ class PdfShareHelper {
                       ),
                     ),
                     pw.Spacer(),
-                    // Timestamp
                     pw.Text(
                       displayTime,
                       style: pw.TextStyle(
@@ -122,7 +143,6 @@ class PdfShareHelper {
                   ],
                 ),
                 pw.SizedBox(height: 6),
-                // Endpoint
                 pw.Text(
                   displayEndpoint,
                   style: pw.TextStyle(
@@ -133,7 +153,6 @@ class PdfShareHelper {
                   softWrap: true,
                 ),
                 pw.SizedBox(height: 4),
-                // Duration
                 pw.Text(
                   '${log.durationMs}ms',
                   style: pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
@@ -148,46 +167,63 @@ class PdfShareHelper {
     content.add(pw.SizedBox(height: 12));
     content.add(pw.Divider(color: PdfColors.grey300, thickness: 0.5));
 
-    // --- URL ---
-    _addSection(content, 'URL', log.url);
-
-    // --- Request Headers ---
-    _addSection(content, 'Request Headers', _prettyJson(log.requestHeaders));
-
-    // --- Request Body ---
+    _addPlainSection(content, theme, 'URL', log.url);
+    _addJsonSection(
+      content,
+      theme,
+      'Request Headers',
+      _prettyJson(log.requestHeaders),
+    );
     final bodyType = _getRequestBodyType(log.requestHeaders);
-    _addSection(content, 'Request Body$bodyType', _prettyJson(log.requestBody));
+    _addJsonSection(
+      content,
+      theme,
+      'Request Body$bodyType',
+      _prettyJson(log.requestBody),
+    );
+    _addJsonSection(
+      content,
+      theme,
+      'Response Headers',
+      _prettyJson(log.responseHeaders),
+    );
+    _addJsonSection(
+      content,
+      theme,
+      'Response Body',
+      _prettyJson(log.responseBody),
+    );
 
-    // --- Response Headers ---
-    _addSection(content, 'Response Headers', _prettyJson(log.responseHeaders));
+    final pageHeight = _estimatePageHeight(
+      log: log,
+      displayEndpoint: displayEndpoint,
+      innerWidth: innerWidth,
+    );
 
-    // --- Response Body ---
-    _addSection(content, 'Response Body', _prettyJson(log.responseBody));
-
-    const margin = 40.0;
-
-    final pdf = pw.Document();
+    final pdf = pw.Document(theme: theme);
 
     pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(margin),
-        maxPages: 200,
-        build: (pw.Context context) => [
-          pw.Container(
+      pw.Page(
+        pageFormat: PdfPageFormat(
+          _pageWidthPt,
+          pageHeight,
+          marginAll: _marginPt,
+        ),
+        build: (pw.Context context) {
+          return pw.Container(
             decoration: pw.BoxDecoration(
               color: PdfColors.white,
               borderRadius: pw.BorderRadius.circular(8),
               border: pw.Border.all(color: PdfColors.grey300, width: 1.5),
             ),
-            padding: const pw.EdgeInsets.all(20),
+            padding: const pw.EdgeInsets.all(_cardPaddingPt),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.stretch,
               mainAxisSize: pw.MainAxisSize.min,
               children: content,
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
 
@@ -200,9 +236,62 @@ class PdfShareHelper {
     return file;
   }
 
-  static void _addSection(List<pw.Widget> content, String title, String? text) {
-    if (text == null || text.isEmpty) return;
+  static double _estimatePageHeight({
+    required ApiLogModel log,
+    required String displayEndpoint,
+    required double innerWidth,
+  }) {
+    const headerBlock = 130.0;
+    const divider = 14.0;
+    const cardPad = _cardPaddingPt * 2;
+    const sectionTitle = 34.0;
+    const sectionBoxPad = 24.0;
+    const approxChar = 5.0;
 
+    double h = cardPad + headerBlock + divider;
+
+    void addSection(String? raw, {required bool json}) {
+      if (raw == null || raw.isEmpty) return;
+      final text = json ? (_prettyJson(raw) ?? raw) : raw;
+      h += 12 + sectionTitle;
+      final lines = _estimateWrappedLines(text, innerWidth, approxChar);
+      h += lines * _lineHeightPt + sectionBoxPad;
+    }
+
+    addSection(log.url, json: false);
+    addSection(log.requestHeaders, json: true);
+    addSection(log.requestBody, json: true);
+    addSection(log.responseHeaders, json: true);
+    addSection(log.responseBody, json: true);
+
+    final marginV = _marginPt * 2;
+    return (h * 1.15 + marginV).clamp(320, 200000);
+  }
+
+  static int _estimateWrappedLines(
+    String text,
+    double innerWidth,
+    double charW,
+  ) {
+    final charsPerLine = (innerWidth / charW).floor().clamp(24, 120);
+    var total = 0;
+    for (final line in text.split('\n')) {
+      if (line.isEmpty) {
+        total += 1;
+      } else {
+        total += (line.length / charsPerLine).ceil();
+      }
+    }
+    return total;
+  }
+
+  static void _addPlainSection(
+    List<pw.Widget> content,
+    pw.ThemeData theme,
+    String title,
+    String? text,
+  ) {
+    if (text == null || text.isEmpty) return;
     content.add(pw.SizedBox(height: 12));
     content.add(
       pw.Text(
@@ -226,9 +315,54 @@ class PdfShareHelper {
         ),
         child: pw.Text(
           text,
-          style: const pw.TextStyle(fontSize: 10, lineSpacing: 2),
+          style: theme.defaultTextStyle.copyWith(
+            fontSize: _codeFontSize,
+            lineSpacing: 2,
+          ),
           softWrap: true,
-          overflow: pw.TextOverflow.span,
+        ),
+      ),
+    );
+  }
+
+  static void _addJsonSection(
+    List<pw.Widget> content,
+    pw.ThemeData theme,
+    String title,
+    String? text,
+  ) {
+    if (text == null || text.isEmpty) return;
+    final base = theme.defaultTextStyle.copyWith(
+      fontSize: _codeFontSize,
+      lineSpacing: 2,
+    );
+
+    content.add(pw.SizedBox(height: 12));
+    content.add(
+      pw.Text(
+        title,
+        style: pw.TextStyle(
+          fontWeight: pw.FontWeight.bold,
+          fontSize: 13,
+          color: PdfColors.black,
+        ),
+      ),
+    );
+    content.add(pw.SizedBox(height: 6));
+    content.add(
+      pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          color: const PdfColor(0.98, 0.98, 0.98),
+          borderRadius: pw.BorderRadius.circular(6),
+          border: pw.Border.all(color: PdfColors.grey200),
+        ),
+        child: pw.RichText(
+          text: pw.TextSpan(
+            style: base,
+            children: PdfJsonSyntax.highlight(text, base),
+          ),
         ),
       ),
     );
@@ -248,7 +382,7 @@ class PdfShareHelper {
     try {
       if (requestHeaders == null || requestHeaders.isEmpty) return '';
       final headers = jsonDecode(requestHeaders) as Map<String, dynamic>;
-      String contentType = '';
+      var contentType = '';
       headers.forEach((key, value) {
         if (key.toLowerCase() == 'content-type') {
           contentType = value.toString().toLowerCase();

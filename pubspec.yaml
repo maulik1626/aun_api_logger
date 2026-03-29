@@ -1,6 +1,6 @@
 name: aun_api_logger
 description: "A new Flutter package project."
-version: 1.7.2
+version: 1.8.0
 homepage:
 
 environment:
@@ -28,6 +28,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  assets:
+    - assets/fonts/NotoSans-Regular.ttf
+    - assets/fonts/NotoSans-Bold.ttf
 
   # To add assets to your package, add an assets section, like this:
   # assets:
