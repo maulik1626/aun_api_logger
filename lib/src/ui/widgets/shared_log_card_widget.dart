@@ -190,7 +190,7 @@ class SharedLogCardWidget extends StatelessWidget {
                     width: 4,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: LogColorHelper.getStatusColor(log.statusCode),
+                      color: LogColorHelper.getMethodColor(log.method),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),

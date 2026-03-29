@@ -220,11 +220,14 @@ class _LogItemBlockState extends State<LogItemBlock>
 
     final statusColor = LogColorHelper.getStatusColor(widget.log.statusCode);
 
-    final card = Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
-      child: Stack(
+    final card = Material(
+      color: Colors.transparent,
+      child: Container(
+        width: MediaQuery.of(context).size.width - 32,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+        child: Stack(
         children: [
           // Background action buttons revealed on swipe
           Positioned.fill(
@@ -319,7 +322,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                               width: 4,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: statusColor,
+                                color: LogColorHelper.getMethodColor(widget.log.method),
                                 borderRadius: BorderRadius.circular(2),
                               ),
                             ),

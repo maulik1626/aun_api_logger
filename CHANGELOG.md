@@ -1,3 +1,14 @@
+## 1.6.1 - 2026-03-30
+
+### Fixed
+
+- Resolved `No Material widget found` exception thrown by `InkWell` during `CupertinoContextMenu` transitions.
+- Prevented infinite width layout errors on shared card preview by providing strict constraints.
+
+### Added
+
+- Feature: Updated UI to color-code the left sidebar indicator according to HTTP request type instead of status code.
+
 ## 1.6.0 - 2026-03-29
 
 ### Added
