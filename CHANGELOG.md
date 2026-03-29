@@ -1,3 +1,26 @@
+## 1.7.1 - 2026-03-29
+
+### Fixed
+
+- Shared log PDFs no longer use a single extremely tall page; content flows across standard A4 pages, removing large blank areas below the log.
+- Long JSON sections in the PDF can span page breaks (`TextOverflow.span`) instead of failing layout.
+
+### Changed
+
+- Log PDF sharing uses `SharePlus.instance.share(ShareParams(files: ...))` with files only—no companion share-sheet text.
+- iOS: `CupertinoContextMenu.builder` avoids the grey long-press decoy shadow; expand/collapse `InkWell` uses no Material splash or highlight.
+- Removed redundant `material.dart` import from `color_helper.dart` (analyzer cleanliness).
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.7.1
+```
+
 ## 1.7.0 - 2026-03-30
 
 ### Changed
@@ -7,6 +30,16 @@
 - PDF files are named descriptively: `{METHOD}_{endpoint}_{hh-mm-ss_AM/PM}.pdf`.
 - Color-coded HTTP method badge and status code in the PDF.
 - Removed `screenshot` dependency; added `pdf` dependency.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.7.0
+```
 
 ## 1.6.3 - 2026-03-30
 

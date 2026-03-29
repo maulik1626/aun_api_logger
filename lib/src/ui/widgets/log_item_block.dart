@@ -9,6 +9,7 @@ import '../../utils/log_helper.dart';
 import '../../utils/pdf_share_helper.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+
 class LogItemBlock extends StatefulWidget {
   final ApiLogModel log;
   final bool isIOS;
@@ -80,11 +81,14 @@ class _LogItemBlockState extends State<LogItemBlock>
       // Strip auth if requested
       if (!withAuth && shareLog.requestHeaders != null) {
         try {
-          final headers = jsonDecode(shareLog.requestHeaders!) as Map<String, dynamic>;
+          final headers =
+              jsonDecode(shareLog.requestHeaders!) as Map<String, dynamic>;
           final List<String> keysToRemove = [];
           headers.forEach((key, value) {
             final lower = key.toLowerCase();
-            if (lower.contains('authorization') || lower.contains('token') || lower.contains('bearer')) {
+            if (lower.contains('authorization') ||
+                lower.contains('token') ||
+                lower.contains('bearer')) {
               keysToRemove.add(key);
             }
           });
@@ -101,76 +105,22 @@ class _LogItemBlockState extends State<LogItemBlock>
         widget.displayEndpoint,
       );
 
-      final String shareText = _buildShareText(shareLog);
-
-      // ignore: deprecated_member_use
-      await Share.shareXFiles([XFile(pdfFile.path)], text: shareText);
+      await SharePlus.instance.share(
+        ShareParams(files: <XFile>[XFile(pdfFile.path)]),
+      );
 
       Future.delayed(const Duration(seconds: 10), () {
         if (pdfFile.existsSync()) {
-          try { pdfFile.deleteSync(); } catch (_) {}
+          try {
+            pdfFile.deleteSync();
+          } catch (_) {}
         }
       });
-    } catch (e) {
-      debugPrint('Share Error: $e');
-    }
+    } catch (_) {}
 
     if (_isSlid) {
       _toggleSlide();
     }
-  }
-
-  String _buildShareText(ApiLogModel logToShare) {
-    final buffer = StringBuffer();
-    buffer.writeln('🌐 URL: ${logToShare.url}');
-    buffer.writeln('📥 Method: ${logToShare.method}');
-    buffer.writeln('⏱️ Time: ${logToShare.durationMs}ms');
-    buffer.writeln('🟢 Status: ${logToShare.statusCode ?? 'PENDING'}');
-    buffer.writeln();
-
-    if (logToShare.requestHeaders != null && logToShare.requestHeaders!.isNotEmpty && logToShare.requestHeaders != '{}') {
-      try {
-        final pretty = const JsonEncoder.withIndent('  ').convert(jsonDecode(logToShare.requestHeaders!));
-        buffer.writeln('📋 Request Headers:');
-        buffer.writeln(pretty);
-        buffer.writeln();
-      } catch (_) {}
-    }
-
-    if (logToShare.requestBody != null && logToShare.requestBody!.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(logToShare.requestBody!);
-        buffer.writeln('📦 Request Body:');
-        buffer.writeln(const JsonEncoder.withIndent('  ').convert(decoded));
-        buffer.writeln();
-      } catch (_) {
-        buffer.writeln('📦 Request Body:');
-        buffer.writeln(logToShare.requestBody);
-        buffer.writeln();
-      }
-    }
-
-    if (logToShare.responseHeaders != null && logToShare.responseHeaders!.isNotEmpty && logToShare.responseHeaders != '{}') {
-      try {
-        final pretty = const JsonEncoder.withIndent('  ').convert(jsonDecode(logToShare.responseHeaders!));
-        buffer.writeln('📋 Response Headers:');
-        buffer.writeln(pretty);
-        buffer.writeln();
-      } catch (_) {}
-    }
-
-    if (logToShare.responseBody != null && logToShare.responseBody!.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(logToShare.responseBody!);
-        buffer.writeln('📦 Response Body:');
-        buffer.writeln(const JsonEncoder.withIndent('  ').convert(decoded));
-      } catch (_) {
-        buffer.writeln('📦 Response Body:');
-        buffer.writeln(logToShare.responseBody);
-      }
-    }
-    
-    return buffer.toString();
   }
 
   Widget _buildSection(String title, String? content) {
@@ -212,231 +162,246 @@ class _LogItemBlockState extends State<LogItemBlock>
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
         child: Stack(
-        children: [
-          // Background action buttons revealed on swipe
-          Positioned.fill(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GestureDetector(
-                  onTap: () => _shareLog(withAuth: false),
-                  child: Container(
-                    width: 60,
-                    color: widget.isIOS
-                        ? CupertinoColors.activeBlue
-                        : Colors.blue,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          widget.isIOS
-                              ? CupertinoIcons.share
-                              : Icons.share_rounded,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Share',
-                          style: TextStyle(
+          children: [
+            // Background action buttons revealed on swipe
+            Positioned.fill(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  GestureDetector(
+                    onTap: () => _shareLog(withAuth: false),
+                    child: Container(
+                      width: 60,
+                      color: widget.isIOS
+                          ? CupertinoColors.activeBlue
+                          : Colors.blue,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            widget.isIOS
+                                ? CupertinoIcons.share
+                                : Icons.share_rounded,
                             color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
+                            size: 22,
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Foreground card that slides
-          SlideTransition(
-            position: _slideAnimation,
-            child: GestureDetector(
-              onHorizontalDragEnd: (details) {
-                if (details.primaryVelocity != null &&
-                    details.primaryVelocity! < -200) {
-                  if (!_isSlid) {
-                    _toggleSlide();
-                  }
-                } else if (details.primaryVelocity != null &&
-                    details.primaryVelocity! > 200) {
-                  if (_isSlid) {
-                    _toggleSlide();
-                  }
-                }
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: widget.isIOS
-                        ? CupertinoColors.systemGrey5
-                        : Colors.grey.shade200,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    InkWell(
-                      onTap: () {
-                        if (_isSlid) {
-                          _toggleSlide();
-                          return;
-                        }
-                        setState(() {
-                          _isExpanded = !_isExpanded;
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 4,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: LogColorHelper.getMethodColor(widget.log.method),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Share',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: LogColorHelper.getMethodColor(widget.log.method).withValues(
-                                            alpha: 0.1,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Foreground card that slides
+            SlideTransition(
+              position: _slideAnimation,
+              child: GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  if (details.primaryVelocity != null &&
+                      details.primaryVelocity! < -200) {
+                    if (!_isSlid) {
+                      _toggleSlide();
+                    }
+                  } else if (details.primaryVelocity != null &&
+                      details.primaryVelocity! > 200) {
+                    if (_isSlid) {
+                      _toggleSlide();
+                    }
+                  }
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: widget.isIOS
+                          ? CupertinoColors.systemGrey5
+                          : Colors.grey.shade200,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      InkWell(
+                        splashColor: Colors.transparent,
+                        highlightColor: Colors.transparent,
+                        hoverColor: Colors.transparent,
+                        splashFactory: NoSplash.splashFactory,
+                        onTap: () {
+                          if (_isSlid) {
+                            _toggleSlide();
+                            return;
+                          }
+                          setState(() {
+                            _isExpanded = !_isExpanded;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: LogColorHelper.getMethodColor(
+                                    widget.log.method,
+                                  ),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
                                           ),
-                                          borderRadius: BorderRadius.circular(
-                                            4,
+                                          decoration: BoxDecoration(
+                                            color:
+                                                LogColorHelper.getMethodColor(
+                                                  widget.log.method,
+                                                ).withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            widget.log.method,
+                                            style: TextStyle(
+                                              color:
+                                                  LogColorHelper.getMethodColor(
+                                                    widget.log.method,
+                                                  ),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
-                                        child: Text(
-                                          widget.log.method,
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          widget.log.statusCode?.toString() ??
+                                              'PENDING',
                                           style: TextStyle(
-                                            color: LogColorHelper.getMethodColor(widget.log.method),
-                                            fontSize: 10,
+                                            color: statusColor,
+                                            fontSize: 13,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        widget.log.statusCode?.toString() ??
-                                            'PENDING',
-                                        style: TextStyle(
-                                          color: statusColor,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.bold,
+                                        const Spacer(),
+                                        Text(
+                                          timeStr,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade500,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                         ),
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        timeStr,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey.shade500,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    widget.displayEndpoint,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                      color: Colors.black,
+                                      ],
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${widget.log.durationMs}ms',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade500,
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      widget.displayEndpoint,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                        color: Colors.black,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${widget.log.durationMs}ms',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              _isExpanded
-                                  ? (widget.isIOS
-                                        ? CupertinoIcons.chevron_up
-                                        : Icons.expand_less_rounded)
-                                  : (widget.isIOS
-                                        ? CupertinoIcons.chevron_down
-                                        : Icons.expand_more_rounded),
-                              color: Colors.grey.shade400,
-                              size: 20,
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Icon(
+                                _isExpanded
+                                    ? (widget.isIOS
+                                          ? CupertinoIcons.chevron_up
+                                          : Icons.expand_less_rounded)
+                                    : (widget.isIOS
+                                          ? CupertinoIcons.chevron_down
+                                          : Icons.expand_more_rounded),
+                                color: Colors.grey.shade400,
+                                size: 20,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    if (_isExpanded)
-                      Container(
-                        color: Colors.white,
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                            _buildSection('URL', widget.log.url),
-                            _buildSection(
-                              'Request Headers',
-                              widget.log.requestHeaders,
-                            ),
-                            _buildSection(
-                              'Request Body${LogHelper.getRequestBodyType(widget.log.requestHeaders)}',
-                              widget.log.requestBody,
-                            ),
-                            _buildSection(
-                              'Response Headers',
-                              widget.log.responseHeaders,
-                            ),
-                            _buildSection(
-                              'Response Body',
-                              widget.log.responseBody,
-                            ),
-                          ],
+                      if (_isExpanded)
+                        Container(
+                          color: Colors.white,
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFEEEEEE),
+                              ),
+                              _buildSection('URL', widget.log.url),
+                              _buildSection(
+                                'Request Headers',
+                                widget.log.requestHeaders,
+                              ),
+                              _buildSection(
+                                'Request Body${LogHelper.getRequestBodyType(widget.log.requestHeaders)}',
+                                widget.log.requestBody,
+                              ),
+                              _buildSection(
+                                'Response Headers',
+                                widget.log.responseHeaders,
+                              ),
+                              _buildSection(
+                                'Response Body',
+                                widget.log.responseBody,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
 
     if (widget.isIOS) {
-      return CupertinoContextMenu(
+      return CupertinoContextMenu.builder(
+        enableHapticFeedback: true,
         actions: <Widget>[
           CupertinoContextMenuAction(
             onPressed: () {
@@ -455,7 +420,7 @@ class _LogItemBlockState extends State<LogItemBlock>
             child: const Text('Share (Full Data)'),
           ),
         ],
-        child: card,
+        builder: (BuildContext context, Animation<double> animation) => card,
       );
     } else {
       return GestureDetector(
@@ -489,10 +454,19 @@ class _LogItemBlockState extends State<LogItemBlock>
                             color: Colors.blue.shade50,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.share_rounded, color: Colors.blue.shade700),
+                          child: Icon(
+                            Icons.share_rounded,
+                            color: Colors.blue.shade700,
+                          ),
                         ),
-                        title: const Text('Share (Without Auth)', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text('Removes authorization tokens', style: TextStyle(fontSize: 12)),
+                        title: const Text(
+                          'Share (Without Auth)',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: const Text(
+                          'Removes authorization tokens',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         onTap: () {
                           Navigator.pop(context);
                           _shareLog(withAuth: false);
@@ -505,10 +479,19 @@ class _LogItemBlockState extends State<LogItemBlock>
                             color: Colors.red.shade50,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.share_rounded, color: Colors.red.shade700),
+                          child: Icon(
+                            Icons.share_rounded,
+                            color: Colors.red.shade700,
+                          ),
                         ),
-                        title: const Text('Share (Full Data)', style: TextStyle(fontWeight: FontWeight.w600)),
-                        subtitle: const Text('Includes all sensitive headers', style: TextStyle(fontSize: 12)),
+                        title: const Text(
+                          'Share (Full Data)',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: const Text(
+                          'Includes all sensitive headers',
+                          style: TextStyle(fontSize: 12),
+                        ),
                         onTap: () {
                           Navigator.pop(context);
                           _shareLog(withAuth: true);

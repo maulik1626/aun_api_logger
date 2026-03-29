@@ -113,7 +113,8 @@ class StaticJsonCodeBlock extends StatelessWidget {
     // Truncate to limit the memory usage and size of the output image preview
     String displayContent = content;
     if (displayContent.length > 2500) {
-      displayContent = '${displayContent.substring(0, 2500)}\n\n... [TRUNCATED FOR IMAGE. SEE FULL DATA IN ATTACHED TEXT] ...';
+      displayContent =
+          '${displayContent.substring(0, 2500)}\n\n... [TRUNCATED FOR IMAGE. SEE FULL DATA IN ATTACHED TEXT] ...';
     }
 
     final highlighted = _highlightJson(displayContent);
@@ -179,125 +180,129 @@ class SharedLogCardWidget extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-        margin: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300, width: 2),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // Wrap content safely
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: LogColorHelper.getMethodColor(log.method),
-                      borderRadius: BorderRadius.circular(2),
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300, width: 2),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Wrap content safely
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: LogColorHelper.getMethodColor(log.method),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: LogColorHelper.getMethodColor(log.method)
-                                    .withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                log.method,
-                                style: TextStyle(
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
                                   color: LogColorHelper.getMethodColor(
-                                      log.method),
-                                  fontSize: 10,
+                                    log.method,
+                                  ).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  log.method,
+                                  style: TextStyle(
+                                    color: LogColorHelper.getMethodColor(
+                                      log.method,
+                                    ),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                log.statusCode?.toString() ?? 'PENDING',
+                                style: TextStyle(
+                                  color: LogColorHelper.getStatusColor(
+                                    log.statusCode,
+                                  ),
+                                  fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              log.statusCode?.toString() ?? 'PENDING',
-                              style: TextStyle(
-                                color: LogColorHelper.getStatusColor(
-                                    log.statusCode),
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              DateFormat('hh:mm:ss a').format(
-                                DateTime.fromMillisecondsSinceEpoch(
-                                  log.requestTime,
+                              const Spacer(),
+                              Text(
+                                DateFormat('hh:mm:ss a').format(
+                                  DateTime.fromMillisecondsSinceEpoch(
+                                    log.requestTime,
+                                  ),
+                                ),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            displayEndpoint,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: Colors.black,
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          displayEndpoint,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            color: Colors.black,
+                            maxLines: 4,
                           ),
-                          maxLines: 4,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${log.durationMs}ms',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
+                          const SizedBox(height: 4),
+                          Text(
+                            '${log.durationMs}ms',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                  _buildSection('URL', log.url),
-                  _buildSection('Request Headers', log.requestHeaders),
-                  _buildSection(
-                    'Request Body${LogHelper.getRequestBodyType(log.requestHeaders)}',
-                    log.requestBody,
-                  ),
-                  _buildSection('Response Headers', log.responseHeaders),
-                  _buildSection('Response Body', log.responseBody),
-                ],
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                    _buildSection('URL', log.url),
+                    _buildSection('Request Headers', log.requestHeaders),
+                    _buildSection(
+                      'Request Body${LogHelper.getRequestBodyType(log.requestHeaders)}',
+                      log.requestBody,
+                    ),
+                    _buildSection('Response Headers', log.responseHeaders),
+                    _buildSection('Response Body', log.responseBody),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ));
+    );
   }
 }

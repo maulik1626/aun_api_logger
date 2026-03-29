@@ -36,16 +36,19 @@ class PdfShareHelper {
   }
 
   /// Generates a PDF file from the given log and returns the File.
-  static Future<File> generatePdf(ApiLogModel log, String displayEndpoint) async {
+  static Future<File> generatePdf(
+    ApiLogModel log,
+    String displayEndpoint,
+  ) async {
     final methodColor = getMethodPdfColor(log.method);
     final statusColor = getStatusPdfColor(log.statusCode);
 
-    final timeStr = DateFormat('hh-mm-ss_a').format(
-      DateTime.fromMillisecondsSinceEpoch(log.requestTime),
-    );
-    final displayTime = DateFormat('hh:mm:ss a').format(
-      DateTime.fromMillisecondsSinceEpoch(log.requestTime),
-    );
+    final timeStr = DateFormat(
+      'hh-mm-ss_a',
+    ).format(DateTime.fromMillisecondsSinceEpoch(log.requestTime));
+    final displayTime = DateFormat(
+      'hh:mm:ss a',
+    ).format(DateTime.fromMillisecondsSinceEpoch(log.requestTime));
 
     // Build sanitized filename
     final endpointSlug = displayEndpoint
@@ -133,10 +136,7 @@ class PdfShareHelper {
                 // Duration
                 pw.Text(
                   '${log.durationMs}ms',
-                  style: pw.TextStyle(
-                    fontSize: 11,
-                    color: PdfColors.grey600,
-                  ),
+                  style: pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
                 ),
               ],
             ),
@@ -156,11 +156,7 @@ class PdfShareHelper {
 
     // --- Request Body ---
     final bodyType = _getRequestBodyType(log.requestHeaders);
-    _addSection(
-      content,
-      'Request Body$bodyType',
-      _prettyJson(log.requestBody),
-    );
+    _addSection(content, 'Request Body$bodyType', _prettyJson(log.requestBody));
 
     // --- Response Headers ---
     _addSection(content, 'Response Headers', _prettyJson(log.responseHeaders));
@@ -168,22 +164,17 @@ class PdfShareHelper {
     // --- Response Body ---
     _addSection(content, 'Response Body', _prettyJson(log.responseBody));
 
-    // Calculate approximate content height
-    // We use a very tall page so there's no page break
-    const a4Width = 595.28; // A4 width in points
     const margin = 40.0;
 
     final pdf = pw.Document();
 
     pdf.addPage(
-      pw.Page(
-        pageFormat: const PdfPageFormat(
-          a4Width,
-          50000, // Very tall single page — no page breaks
-          marginAll: margin,
-        ),
-        build: (pw.Context context) {
-          return pw.Container(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(margin),
+        maxPages: 200,
+        build: (pw.Context context) => [
+          pw.Container(
             decoration: pw.BoxDecoration(
               color: PdfColors.white,
               borderRadius: pw.BorderRadius.circular(8),
@@ -195,8 +186,8 @@ class PdfShareHelper {
               mainAxisSize: pw.MainAxisSize.min,
               children: content,
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
 
@@ -235,11 +226,9 @@ class PdfShareHelper {
         ),
         child: pw.Text(
           text,
-          style: const pw.TextStyle(
-            fontSize: 10,
-            lineSpacing: 2,
-          ),
+          style: const pw.TextStyle(fontSize: 10, lineSpacing: 2),
           softWrap: true,
+          overflow: pw.TextOverflow.span,
         ),
       ),
     );
