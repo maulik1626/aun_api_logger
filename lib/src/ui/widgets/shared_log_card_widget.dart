@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:flutter/cupertino.dart';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -111,7 +110,13 @@ class StaticJsonCodeBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final highlighted = _highlightJson(content);
+    // Truncate to limit the memory usage and size of the output image preview
+    String displayContent = content;
+    if (displayContent.length > 2500) {
+      displayContent = '${displayContent.substring(0, 2500)}\n\n... [TRUNCATED FOR IMAGE. SEE FULL DATA IN ATTACHED TEXT] ...';
+    }
+
+    final highlighted = _highlightJson(displayContent);
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -120,7 +125,7 @@ class StaticJsonCodeBlock extends StatelessWidget {
         border: Border.all(color: Colors.grey.shade200),
       ),
       padding: const EdgeInsets.all(12),
-      child: SelectableText.rich(
+      child: Text.rich(
         TextSpan(
           children: highlighted,
           style: const TextStyle(
@@ -168,10 +173,12 @@ class SharedLogCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Standard Material wrapper to construct theme correctly for Screenshot
-    return Material(
-      color: Colors.transparent,
-      child: Container(
+    // Standard Material wrapper with inherit localizations natively.
+    return Directionality(
+      textDirection: ui.TextDirection.ltr,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
         margin: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -291,6 +298,6 @@ class SharedLogCardWidget extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }

@@ -1,3 +1,10 @@
+## 1.6.3 - 2026-03-30
+
+### Fixed
+
+- Resolved `No MediaQuery widget ancestor found` error by using `Text.rich` instead of `SelectableText.rich` in the screenshot widget.
+- Resolved `RenderFlex overflowed by X pixels` error by limiting extreme JSON capture text to 2500 characters within images and wrapping the capture content in `SingleChildScrollView`.
+
 ## 1.6.2 - 2026-03-30
 
 ### Fixed

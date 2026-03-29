@@ -101,9 +101,15 @@ class _LogItemBlockState extends State<LogItemBlock>
 
       // Capture Image
       final Uint8List? imageBytes = await screenshotController.captureFromWidget(
-        SharedLogCardWidget(log: shareLog, displayEndpoint: widget.displayEndpoint),
+        Material(
+          color: Colors.transparent,
+          child: SingleChildScrollView(
+            child: SharedLogCardWidget(log: shareLog, displayEndpoint: widget.displayEndpoint),
+          ),
+        ),
         delay: const Duration(milliseconds: 100),
         pixelRatio: 2.5,
+        context: context,
       );
 
       if (imageBytes != null) {
