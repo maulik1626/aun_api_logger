@@ -1,3 +1,20 @@
+## 1.9.6 - 2026-03-29
+
+### Changed
+
+- **Share as PNG image**: Swipe → Share now shares the log card screenshot as a **PNG file** directly. The intermediate PDF wrapper and the **`pdf`** package dependency have been removed.
+- **Removed**: `PdfShareHelper`, `PdfJsonSyntax` (PDF-only JSON highlighting), and related tests.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.9.6
+```
+
 ## 1.9.5 - 2026-03-29
 
 ### Fixed

@@ -9,7 +9,7 @@ import 'package:screenshot/screenshot.dart';
 import '../../core/api_log_model.dart';
 import '../../utils/color_helper.dart';
 import '../../utils/log_helper.dart';
-import '../../utils/pdf_share_helper.dart';
+import '../../utils/image_share_helper.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'shared_log_capture_card.dart';
@@ -71,11 +71,11 @@ class _LogItemBlockState extends State<LogItemBlock>
       return;
     }
     _shareInProgress = true;
-    File? pdfFile;
-    var pdfLoaderShown = false;
+    File? shareFile;
+    var shareLoaderShown = false;
     try {
       if (mounted) {
-        pdfLoaderShown = true;
+        shareLoaderShown = true;
         unawaited(
           showDialog<void>(
             context: context,
@@ -84,7 +84,7 @@ class _LogItemBlockState extends State<LogItemBlock>
             builder: (BuildContext dialogContext) {
               if (widget.isIOS) {
                 return const CupertinoAlertDialog(
-                  title: Text('Preparing PDF'),
+                  title: Text('Preparing image'),
                   content: Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: CupertinoActivityIndicator(radius: 14),
@@ -104,7 +104,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
-                          'Preparing PDF…',
+                          'Preparing image…',
                           style: Theme.of(dialogContext).textTheme.bodyMedium,
                         ),
                       ),
@@ -180,19 +180,18 @@ class _LogItemBlockState extends State<LogItemBlock>
         ),
       );
 
-      pdfFile = await PdfShareHelper.generatePdfFromImageBytes(
-        imageBytes: pngBytes,
+      shareFile = await ImageShareHelper.writeSharePngFile(
+        pngBytes: pngBytes,
         method: shareLog.method,
         displayEndpoint: widget.displayEndpoint,
         requestTime: shareLog.requestTime,
-        pixelRatio: capturePixelRatio,
       );
 
       await SharePlus.instance.share(
-        ShareParams(files: <XFile>[XFile(pdfFile.path)]),
+        ShareParams(files: <XFile>[XFile(shareFile.path)]),
       );
 
-      final File toDelete = pdfFile;
+      final File toDelete = shareFile;
       Future.delayed(const Duration(seconds: 30), () {
         if (toDelete.existsSync()) {
           try {
@@ -211,7 +210,7 @@ class _LogItemBlockState extends State<LogItemBlock>
         );
       }
     } finally {
-      if (pdfLoaderShown && mounted) {
+      if (shareLoaderShown && mounted) {
         try {
           Navigator.of(context, rootNavigator: true).pop();
         } catch (_) {}
@@ -224,7 +223,7 @@ class _LogItemBlockState extends State<LogItemBlock>
     }
   }
 
-  /// Swipe → Share: adaptive sheet to pick PDF with or without auth headers.
+  /// Swipe → Share: adaptive sheet to pick image with or without auth headers.
   Future<void> _showAdaptiveShareSheet() async {
     if (!mounted) return;
 
@@ -234,7 +233,7 @@ class _LogItemBlockState extends State<LogItemBlock>
         builder: (BuildContext ctx) => CupertinoActionSheet(
           title: const Text('Share log'),
           message: const Text(
-            'PDF will include request headers and bodies. Choose whether auth tokens are included.',
+            'The image will include request headers and bodies. Choose whether auth tokens are included.',
           ),
           actions: <Widget>[
             CupertinoActionSheetAction(
@@ -289,7 +288,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
-                    'PDF includes headers and bodies. Choose whether auth tokens are included.',
+                    'The image includes headers and bodies. Choose whether auth tokens are included.',
                     style: TextStyle(fontSize: 13, color: Colors.black54),
                   ),
                 ),
@@ -304,7 +303,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   subtitle: const Text(
-                    'Authorization and similar headers are redacted in the PDF.',
+                    'Authorization and similar headers are redacted in the image.',
                     style: TextStyle(fontSize: 12),
                   ),
                   onTap: () {
@@ -607,7 +606,7 @@ class _LogItemBlockState extends State<LogItemBlock>
       ),
     );
 
-    // PDF share only via swipe → Share (see background [GestureDetector] above).
+    // Image share only via swipe → Share (see background [GestureDetector] above).
     return card;
   }
 }
