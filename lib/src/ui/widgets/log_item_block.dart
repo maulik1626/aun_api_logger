@@ -5,12 +5,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:screenshot/screenshot.dart';
 import '../../core/api_log_model.dart';
 import '../../utils/color_helper.dart';
 import '../../utils/log_helper.dart';
 import '../../utils/pdf_share_helper.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import 'shared_log_capture_card.dart';
 
 class LogItemBlock extends StatefulWidget {
   final ApiLogModel log;
@@ -64,16 +66,6 @@ class _LogItemBlockState extends State<LogItemBlock>
     _isSlid = !_isSlid;
   }
 
-  /// Sharing while expanded breaks the share sheet on some devices; collapse first.
-  Future<void> _collapseForShareIfNeeded() async {
-    if (!_isExpanded || !mounted) {
-      return;
-    }
-    setState(() => _isExpanded = false);
-    await WidgetsBinding.instance.endOfFrame;
-    await Future<void>.delayed(const Duration(milliseconds: 120));
-  }
-
   Future<void> _shareLog({bool withAuth = false}) async {
     if (_shareInProgress) {
       return;
@@ -125,11 +117,6 @@ class _LogItemBlockState extends State<LogItemBlock>
         );
       }
 
-      await _collapseForShareIfNeeded();
-      if (!mounted) {
-        return;
-      }
-
       // Create a copy of the log data
       ApiLogModel shareLog = ApiLogModel(
         id: widget.log.id,
@@ -166,10 +153,36 @@ class _LogItemBlockState extends State<LogItemBlock>
         } catch (_) {}
       }
 
-      // Generate PDF
-      pdfFile = await PdfShareHelper.generatePdf(
-        shareLog,
-        widget.displayEndpoint,
+      if (!mounted) {
+        return;
+      }
+
+      final mediaQuery = MediaQuery.of(context);
+      final captureWidth = mediaQuery.size.width < 600 ? 860.0 : 980.0;
+      final controller = ScreenshotController();
+      final Uint8List pngBytes = await controller.captureFromLongWidget(
+        Container(
+          color: const Color(0xFFF5F7FB),
+          padding: const EdgeInsets.all(24),
+          child: SizedBox(
+            width: captureWidth,
+            child: SharedLogCaptureCard(
+              log: shareLog,
+              displayEndpoint: widget.displayEndpoint,
+            ),
+          ),
+        ),
+        context: context,
+        delay: const Duration(milliseconds: 300),
+        pixelRatio: 2,
+        constraints: BoxConstraints(maxWidth: captureWidth + 48),
+      );
+
+      pdfFile = await PdfShareHelper.generatePdfFromImageBytes(
+        imageBytes: pngBytes,
+        method: shareLog.method,
+        displayEndpoint: widget.displayEndpoint,
+        requestTime: shareLog.requestTime,
       );
 
       await SharePlus.instance.share(

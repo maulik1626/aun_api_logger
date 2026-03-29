@@ -1,3 +1,21 @@
+## 1.9.2 - 2026-03-29
+
+### Fixed
+
+- **Broken shared PDF layout**: Replaced direct `pdf/widgets` reconstruction of the log card with a **widened offscreen screenshot** of a dedicated expanded share card, then wrapped that image into a **single-page PDF**. This avoids the glyph corruption / collapsed rendering seen in large response bodies.
+- **Large log sharing readability**: The share-only card now **pretty-prints JSON** and uses a wider capture width before conversion to PDF, so long request / response payloads stay visually consistent with the app card without PDF pagination.
+- **Regression coverage**: Added tests for the image-to-PDF helper and for the widened share card rendering with both small and large payloads.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.9.2
+```
+
 ## 1.9.1 - 2026-03-29
 
 ### Fixed
