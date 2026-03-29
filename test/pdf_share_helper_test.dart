@@ -43,7 +43,7 @@ void main() {
       expect(String.fromCharCodes(bytes.take(5)), '%PDF-');
     });
 
-    testWidgets('renders the widened share card for a small log', (
+    testWidgets('renders the normal-width share card for a small log', (
       WidgetTester tester,
     ) async {
       final log = ApiLogModel(
@@ -64,7 +64,7 @@ void main() {
           home: Material(
             child: SingleChildScrollView(
               child: SizedBox(
-                width: 860,
+                width: 360,
                 child: SharedLogCaptureCard(
                   log: log,
                   displayEndpoint: '/v1/auth',
@@ -120,7 +120,7 @@ void main() {
           home: Material(
             child: SingleChildScrollView(
               child: SizedBox(
-                width: 860,
+                width: 360,
                 child: SharedLogCaptureCard(log: log, displayEndpoint: '/api'),
               ),
             ),

@@ -158,12 +158,12 @@ class _LogItemBlockState extends State<LogItemBlock>
       }
 
       final mediaQuery = MediaQuery.of(context);
-      final captureWidth = mediaQuery.size.width < 600 ? 860.0 : 980.0;
+      final captureWidth = (mediaQuery.size.width - 32).clamp(280.0, 600.0);
       final controller = ScreenshotController();
       final Uint8List pngBytes = await controller.captureFromLongWidget(
         Container(
           color: const Color(0xFFF5F7FB),
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
           child: SizedBox(
             width: captureWidth,
             child: SharedLogCaptureCard(
@@ -175,7 +175,7 @@ class _LogItemBlockState extends State<LogItemBlock>
         context: context,
         delay: const Duration(milliseconds: 300),
         pixelRatio: 2,
-        constraints: BoxConstraints(maxWidth: captureWidth + 48),
+        constraints: BoxConstraints(maxWidth: captureWidth + 32),
       );
 
       pdfFile = await PdfShareHelper.generatePdfFromImageBytes(
