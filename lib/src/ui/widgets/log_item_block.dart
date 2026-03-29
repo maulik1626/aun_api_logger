@@ -449,7 +449,7 @@ class _LogItemBlockState extends State<LogItemBlock>
           ),
         ],
       ),
-    );
+    ));
 
     if (widget.isIOS) {
       return CupertinoContextMenu(

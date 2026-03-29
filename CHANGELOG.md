@@ -1,3 +1,9 @@
+## 1.6.2 - 2026-03-30
+
+### Fixed
+
+- Fixed a syntax error introduced during the Material ancestor fix.
+
 ## 1.6.1 - 2026-03-30
 
 ### Fixed
