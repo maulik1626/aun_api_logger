@@ -1,11 +1,16 @@
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/api_log_model.dart';
+import '../../utils/color_helper.dart';
+import '../../utils/log_helper.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
-
+import 'shared_log_card_widget.dart';
 class LogItemBlock extends StatefulWidget {
   final ApiLogModel log;
   final bool isIOS;
@@ -57,57 +62,131 @@ class _LogItemBlockState extends State<LogItemBlock>
     _isSlid = !_isSlid;
   }
 
-  void _shareLog() {
-    final content = const JsonEncoder.withIndent(
-      '  ',
-    ).convert(widget.log.toMap());
-    // ignore: deprecated_member_use
-    Share.share(content);
-    _slideController.reverse();
-    _isSlid = false;
-  }
-
-  Color _getStatusColor(int? statusCode) {
-    if (statusCode == null) {
-      return CupertinoColors.systemGrey;
-    }
-    if (statusCode >= 200 && statusCode < 300) {
-      return CupertinoColors.activeGreen;
-    }
-    if (statusCode >= 300 && statusCode < 400) {
-      return CupertinoColors.systemBlue;
-    }
-    if (statusCode >= 400 && statusCode < 500) {
-      return CupertinoColors.systemOrange;
-    }
-    return CupertinoColors.systemRed;
-  }
-
-  String _getRequestBodyType() {
+  Future<void> _shareLog({bool withAuth = false}) async {
     try {
-      if (widget.log.requestHeaders == null ||
-          widget.log.requestHeaders!.isEmpty) {
-        return '';
-      }
-      final headers =
-          jsonDecode(widget.log.requestHeaders!) as Map<String, dynamic>;
+      final ScreenshotController screenshotController = ScreenshotController();
+      
+      // Clone log
+      ApiLogModel shareLog = ApiLogModel(
+        id: widget.log.id,
+        method: widget.log.method,
+        url: widget.log.url,
+        endpoint: widget.log.endpoint,
+        statusCode: widget.log.statusCode,
+        requestHeaders: widget.log.requestHeaders,
+        requestBody: widget.log.requestBody,
+        responseHeaders: widget.log.responseHeaders,
+        responseBody: widget.log.responseBody,
+        requestTime: widget.log.requestTime,
+        durationMs: widget.log.durationMs,
+      );
 
-      String contentType = '';
-      headers.forEach((key, value) {
-        if (key.toLowerCase() == 'content-type') {
-          contentType = value.toString().toLowerCase();
-        }
-      });
-
-      if (contentType.contains('multipart/form-data')) {
-        return ' (FormData)';
-      } else if (contentType.contains('application/json')) {
-        return ' (JSON)';
-      } else if (contentType.contains('application/x-www-form-urlencoded')) {
-        return ' (FormURLEncoded)';
+      // Strip auth if requested
+      if (!withAuth && shareLog.requestHeaders != null) {
+        try {
+          final headers = jsonDecode(shareLog.requestHeaders!) as Map<String, dynamic>;
+          final List<String> keysToRemove = [];
+          headers.forEach((key, value) {
+            final lower = key.toLowerCase();
+            if (lower.contains('authorization') || lower.contains('token') || lower.contains('bearer')) {
+              keysToRemove.add(key);
+            }
+          });
+          for (var k in keysToRemove) {
+            headers[k] = '[Filtered]';
+          }
+          shareLog.requestHeaders = jsonEncode(headers);
+        } catch (_) {}
       }
-    } catch (_) {}
-    return '';
+
+      // Capture Image
+      final Uint8List? imageBytes = await screenshotController.captureFromWidget(
+        SharedLogCardWidget(log: shareLog, displayEndpoint: widget.displayEndpoint),
+        delay: const Duration(milliseconds: 100),
+        pixelRatio: 2.5,
+      );
+
+      if (imageBytes != null) {
+        final directory = await getTemporaryDirectory();
+        final imageFile = File('${directory.path}/shared_log_${DateTime.now().millisecondsSinceEpoch}.png');
+        await imageFile.writeAsBytes(imageBytes);
+
+        final String shareText = _buildShareText(shareLog);
+        
+        // ignore: deprecated_member_use
+        await Share.shareXFiles([XFile(imageFile.path)], text: shareText);
+
+        Future.delayed(const Duration(seconds: 5), () {
+          if (imageFile.existsSync()) {
+            try { imageFile.deleteSync(); } catch (_) {}
+          }
+        });
+      } else {
+        // Fallback to text only
+        final String shareText = _buildShareText(shareLog);
+        // ignore: deprecated_member_use
+        await Share.share(shareText);
+      }
+    } catch (e) {
+      debugPrint('Share Error: $e');
+    }
+
+    if (_isSlid) {
+      _toggleSlide();
+    }
+  }
+
+  String _buildShareText(ApiLogModel logToShare) {
+    final buffer = StringBuffer();
+    buffer.writeln('🌐 URL: ${logToShare.url}');
+    buffer.writeln('📥 Method: ${logToShare.method}');
+    buffer.writeln('⏱️ Time: ${logToShare.durationMs}ms');
+    buffer.writeln('🟢 Status: ${logToShare.statusCode ?? 'PENDING'}');
+    buffer.writeln();
+
+    if (logToShare.requestHeaders != null && logToShare.requestHeaders!.isNotEmpty && logToShare.requestHeaders != '{}') {
+      try {
+        final pretty = const JsonEncoder.withIndent('  ').convert(jsonDecode(logToShare.requestHeaders!));
+        buffer.writeln('📋 Request Headers:');
+        buffer.writeln(pretty);
+        buffer.writeln();
+      } catch (_) {}
+    }
+
+    if (logToShare.requestBody != null && logToShare.requestBody!.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(logToShare.requestBody!);
+        buffer.writeln('📦 Request Body:');
+        buffer.writeln(const JsonEncoder.withIndent('  ').convert(decoded));
+        buffer.writeln();
+      } catch (_) {
+        buffer.writeln('📦 Request Body:');
+        buffer.writeln(logToShare.requestBody);
+        buffer.writeln();
+      }
+    }
+
+    if (logToShare.responseHeaders != null && logToShare.responseHeaders!.isNotEmpty && logToShare.responseHeaders != '{}') {
+      try {
+        final pretty = const JsonEncoder.withIndent('  ').convert(jsonDecode(logToShare.responseHeaders!));
+        buffer.writeln('📋 Response Headers:');
+        buffer.writeln(pretty);
+        buffer.writeln();
+      } catch (_) {}
+    }
+
+    if (logToShare.responseBody != null && logToShare.responseBody!.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(logToShare.responseBody!);
+        buffer.writeln('📦 Response Body:');
+        buffer.writeln(const JsonEncoder.withIndent('  ').convert(decoded));
+      } catch (_) {
+        buffer.writeln('📦 Response Body:');
+        buffer.writeln(logToShare.responseBody);
+      }
+    }
+    
+    return buffer.toString();
   }
 
   Widget _buildSection(String title, String? content) {
@@ -139,9 +218,9 @@ class _LogItemBlockState extends State<LogItemBlock>
       DateTime.fromMillisecondsSinceEpoch(widget.log.requestTime),
     );
 
-    final statusColor = _getStatusColor(widget.log.statusCode);
+    final statusColor = LogColorHelper.getStatusColor(widget.log.statusCode);
 
-    return Container(
+    final card = Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
@@ -153,7 +232,7 @@ class _LogItemBlockState extends State<LogItemBlock>
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 GestureDetector(
-                  onTap: _shareLog,
+                  onTap: () => _shareLog(withAuth: false),
                   child: Container(
                     width: 60,
                     color: widget.isIOS
@@ -257,7 +336,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                                           vertical: 2,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: statusColor.withValues(
+                                          color: LogColorHelper.getMethodColor(widget.log.method).withValues(
                                             alpha: 0.1,
                                           ),
                                           borderRadius: BorderRadius.circular(
@@ -267,7 +346,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                                         child: Text(
                                           widget.log.method,
                                           style: TextStyle(
-                                            color: statusColor,
+                                            color: LogColorHelper.getMethodColor(widget.log.method),
                                             fontSize: 10,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -346,7 +425,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                               widget.log.requestHeaders,
                             ),
                             _buildSection(
-                              'Request Body${_getRequestBodyType()}',
+                              'Request Body${LogHelper.getRequestBodyType(widget.log.requestHeaders)}',
                               widget.log.requestBody,
                             ),
                             _buildSection(
@@ -368,6 +447,96 @@ class _LogItemBlockState extends State<LogItemBlock>
         ],
       ),
     );
+
+    if (widget.isIOS) {
+      return CupertinoContextMenu(
+        actions: <Widget>[
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _shareLog(withAuth: false);
+            },
+            trailingIcon: CupertinoIcons.share,
+            child: const Text('Share (Without Auth)'),
+          ),
+          CupertinoContextMenuAction(
+            onPressed: () {
+              Navigator.pop(context);
+              _shareLog(withAuth: true);
+            },
+            trailingIcon: CupertinoIcons.share_solid,
+            child: const Text('Share (Full Data)'),
+          ),
+        ],
+        child: card,
+      );
+    } else {
+      return GestureDetector(
+        onLongPress: () {
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: Colors.white,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            builder: (BuildContext context) {
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.share_rounded, color: Colors.blue.shade700),
+                        ),
+                        title: const Text('Share (Without Auth)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text('Removes authorization tokens', style: TextStyle(fontSize: 12)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _shareLog(withAuth: false);
+                        },
+                      ),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.share_rounded, color: Colors.red.shade700),
+                        ),
+                        title: const Text('Share (Full Data)', style: TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: const Text('Includes all sensitive headers', style: TextStyle(fontSize: 12)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          _shareLog(withAuth: true);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+        child: card,
+      );
+    }
   }
 }
 
