@@ -1,3 +1,4 @@
+import 'dart:async' show unawaited;
 import 'dart:developer' show log;
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
@@ -79,7 +80,51 @@ class _LogItemBlockState extends State<LogItemBlock>
     }
     _shareInProgress = true;
     File? pdfFile;
+    var pdfLoaderShown = false;
     try {
+      if (mounted) {
+        pdfLoaderShown = true;
+        unawaited(
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            useRootNavigator: true,
+            builder: (BuildContext dialogContext) {
+              if (widget.isIOS) {
+                return const CupertinoAlertDialog(
+                  title: Text('Preparing PDF'),
+                  content: Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: CupertinoActivityIndicator(radius: 14),
+                  ),
+                );
+              }
+              return PopScope(
+                canPop: false,
+                child: AlertDialog(
+                  content: Row(
+                    children: <Widget>[
+                      const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          'Preparing PDF…',
+                          style: Theme.of(dialogContext).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      }
+
       await _collapseForShareIfNeeded();
       if (!mounted) {
         return;
@@ -150,6 +195,11 @@ class _LogItemBlockState extends State<LogItemBlock>
         );
       }
     } finally {
+      if (pdfLoaderShown && mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+      }
       _shareInProgress = false;
     }
 

@@ -16,7 +16,13 @@ class PdfShareHelper {
   static const double _marginPt = 20;
   static const double _cardPaddingPt = 20;
   static const double _codeFontSize = 9;
-  static const double _lineHeightPt = 11;
+
+  /// Keeps each JSON/plain block small enough for [pw.MultiPage] to lay out
+  /// (very large [pw.RichText] can trigger TooManyPagesException).
+  static const int _maxLinesPerPdfBlock = 48;
+
+  /// Minified JSON can be a single very long line; split before line-based chunking.
+  static const int _maxCharsPerPdfLine = 2400;
 
   static PdfColor getMethodPdfColor(String? method) {
     if (method == null) return PdfColors.grey;
@@ -61,7 +67,8 @@ class PdfShareHelper {
     }
   }
 
-  /// One continuous page sized to fit the expanded-log layout (no A4 / no pagination).
+  /// Generates a multi-page PDF (fixed card width, flows vertically) so large
+  /// responses are not clipped. Page height matches A4; width stays [_pageWidthPt].
   static Future<File> generatePdf(
     ApiLogModel log,
     String displayEndpoint,
@@ -82,8 +89,6 @@ class PdfShareHelper {
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
     final fileName = '${log.method}_${endpointSlug}_$timeStr.pdf';
-
-    final innerWidth = _pageWidthPt - (_marginPt * 2) - (_cardPaddingPt * 2);
 
     final content = <pw.Widget>[];
 
@@ -195,23 +200,20 @@ class PdfShareHelper {
       _prettyJson(log.responseBody),
     );
 
-    final pageHeight = _estimatePageHeight(
-      log: log,
-      displayEndpoint: displayEndpoint,
-      innerWidth: innerWidth,
-    );
-
     final pdf = pw.Document(theme: theme);
 
+    // [MultiPage] flows sections across pages. One huge [RichText] can exceed
+    // layout limits — sections are chunked (see [_maxLinesPerPdfBlock]).
     pdf.addPage(
-      pw.Page(
+      pw.MultiPage(
         pageFormat: PdfPageFormat(
           _pageWidthPt,
-          pageHeight,
+          PdfPageFormat.a4.height,
           marginAll: _marginPt,
         ),
-        build: (pw.Context context) {
-          return pw.Container(
+        maxPages: 2000,
+        build: (pw.Context context) => [
+          pw.Container(
             decoration: pw.BoxDecoration(
               color: PdfColors.white,
               borderRadius: pw.BorderRadius.circular(8),
@@ -223,8 +225,8 @@ class PdfShareHelper {
               mainAxisSize: pw.MainAxisSize.min,
               children: content,
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
 
@@ -237,53 +239,22 @@ class PdfShareHelper {
     return file;
   }
 
-  static double _estimatePageHeight({
-    required ApiLogModel log,
-    required String displayEndpoint,
-    required double innerWidth,
-  }) {
-    const headerBlock = 130.0;
-    const divider = 14.0;
-    const cardPad = _cardPaddingPt * 2;
-    const sectionTitle = 34.0;
-    const sectionBoxPad = 24.0;
-    const approxChar = 5.0;
-
-    double h = cardPad + headerBlock + divider;
-
-    void addSection(String? raw, {required bool json}) {
-      if (raw == null || raw.isEmpty) return;
-      final text = json ? (_prettyJson(raw) ?? raw) : raw;
-      h += 12 + sectionTitle;
-      final lines = _estimateWrappedLines(text, innerWidth, approxChar);
-      h += lines * _lineHeightPt + sectionBoxPad;
-    }
-
-    addSection(log.url, json: false);
-    addSection(log.requestHeaders, json: true);
-    addSection(log.requestBody, json: true);
-    addSection(log.responseHeaders, json: true);
-    addSection(log.responseBody, json: true);
-
-    final marginV = _marginPt * 2;
-    return (h * 1.15 + marginV).clamp(320, 200000);
-  }
-
-  static int _estimateWrappedLines(
-    String text,
-    double innerWidth,
-    double charW,
-  ) {
-    final charsPerLine = (innerWidth / charW).floor().clamp(24, 120);
-    var total = 0;
+  /// Splits on newlines, then breaks impossibly long lines (minified JSON).
+  static List<String> _linesForPdfBlocks(String text) {
+    final out = <String>[];
     for (final line in text.split('\n')) {
-      if (line.isEmpty) {
-        total += 1;
-      } else {
-        total += (line.length / charsPerLine).ceil();
+      if (line.length <= _maxCharsPerPdfLine) {
+        out.add(line);
+        continue;
+      }
+      for (var i = 0; i < line.length; i += _maxCharsPerPdfLine) {
+        final end = i + _maxCharsPerPdfLine > line.length
+            ? line.length
+            : i + _maxCharsPerPdfLine;
+        out.add(line.substring(i, end));
       }
     }
-    return total;
+    return out;
   }
 
   static void _addPlainSection(
@@ -293,6 +264,11 @@ class PdfShareHelper {
     String? text,
   ) {
     if (text == null || text.isEmpty) return;
+    final style = theme.defaultTextStyle.copyWith(
+      fontSize: _codeFontSize,
+      lineSpacing: 2,
+    );
+    final lines = _linesForPdfBlocks(text);
     content.add(pw.SizedBox(height: 12));
     content.add(
       pw.Text(
@@ -304,26 +280,30 @@ class PdfShareHelper {
         ),
       ),
     );
-    content.add(pw.SizedBox(height: 6));
-    content.add(
-      pw.Container(
-        width: double.infinity,
-        padding: const pw.EdgeInsets.all(12),
-        decoration: pw.BoxDecoration(
-          color: const PdfColor(0.98, 0.98, 0.98),
-          borderRadius: pw.BorderRadius.circular(6),
-          border: pw.Border.all(color: PdfColors.grey200),
-        ),
-        child: pw.Text(
-          text,
-          style: theme.defaultTextStyle.copyWith(
-            fontSize: _codeFontSize,
-            lineSpacing: 2,
+    for (var i = 0; i < lines.length; i += _maxLinesPerPdfBlock) {
+      final end = i + _maxLinesPerPdfBlock > lines.length
+          ? lines.length
+          : i + _maxLinesPerPdfBlock;
+      final chunk = lines.sublist(i, end).join('\n');
+      content.add(pw.SizedBox(height: i == 0 ? 6 : 12));
+      content.add(
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: const PdfColor(0.98, 0.98, 0.98),
+            borderRadius: pw.BorderRadius.circular(6),
+            border: pw.Border.all(color: PdfColors.grey200),
           ),
-          softWrap: true,
+          child: pw.Text(
+            chunk,
+            style: style,
+            softWrap: true,
+            overflow: pw.TextOverflow.span,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   static void _addJsonSection(
@@ -338,6 +318,7 @@ class PdfShareHelper {
       lineSpacing: 2,
     );
 
+    final lines = _linesForPdfBlocks(text);
     content.add(pw.SizedBox(height: 12));
     content.add(
       pw.Text(
@@ -349,24 +330,31 @@ class PdfShareHelper {
         ),
       ),
     );
-    content.add(pw.SizedBox(height: 6));
-    content.add(
-      pw.Container(
-        width: double.infinity,
-        padding: const pw.EdgeInsets.all(12),
-        decoration: pw.BoxDecoration(
-          color: const PdfColor(0.98, 0.98, 0.98),
-          borderRadius: pw.BorderRadius.circular(6),
-          border: pw.Border.all(color: PdfColors.grey200),
-        ),
-        child: pw.RichText(
-          text: pw.TextSpan(
-            style: base,
-            children: PdfJsonSyntax.highlight(text, base),
+    for (var i = 0; i < lines.length; i += _maxLinesPerPdfBlock) {
+      final end = i + _maxLinesPerPdfBlock > lines.length
+          ? lines.length
+          : i + _maxLinesPerPdfBlock;
+      final chunk = lines.sublist(i, end).join('\n');
+      content.add(pw.SizedBox(height: i == 0 ? 6 : 12));
+      content.add(
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(12),
+          decoration: pw.BoxDecoration(
+            color: const PdfColor(0.98, 0.98, 0.98),
+            borderRadius: pw.BorderRadius.circular(6),
+            border: pw.Border.all(color: PdfColors.grey200),
+          ),
+          child: pw.RichText(
+            text: pw.TextSpan(
+              style: base,
+              children: PdfJsonSyntax.highlight(chunk, base),
+            ),
+            overflow: pw.TextOverflow.span,
           ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   static String? _prettyJson(String? raw) {

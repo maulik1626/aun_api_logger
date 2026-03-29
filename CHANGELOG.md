@@ -1,3 +1,21 @@
+## 1.9.1 - 2026-03-29
+
+### Fixed
+
+- **PDF clipping / overflow**: Replaced single fixed-height `pw.Page` (whose height estimate often undershot real `RichText` layout) with **`pw.MultiPage`** so content flows across pages naturally.
+- **Large PDFs failing**: Very large JSON responses caused `TooManyPagesException` because one enormous `RichText` widget couldn't be split by the layout engine. Sections are now **chunked** into blocks of ≤48 lines, and long single lines (minified JSON) are split at 2 400 chars before chunking.
+- **PDF loader dialog**: A "Preparing PDF" loader is now shown while the PDF is being generated (adaptive: `CupertinoAlertDialog` on iOS, `AlertDialog` on Android).
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.9.1
+```
+
 ## 1.9.0 - 2026-03-29
 
 ### Added
