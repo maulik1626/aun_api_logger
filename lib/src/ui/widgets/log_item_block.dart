@@ -123,6 +123,37 @@ class _LogItemBlockState extends State<LogItemBlock>
     }
   }
 
+  /// [CupertinoContextMenu] lays out preview + menu sheet in one viewport.
+  /// The delegate subtracts the child's height from the viewport to size the
+  /// menu sheet.  An expanded log card can be nearly full-screen, making that
+  /// remainder negative.
+  ///
+  /// Fix: hard-cap the preview height so ≥120 px is always left for the sheet
+  /// + safe-area, then scale the card down inside that cap.
+  Widget _iosContextMenuPreview(BuildContext menuContext, Widget logCard) {
+    final size = MediaQuery.sizeOf(menuContext);
+    final padding = MediaQuery.paddingOf(menuContext);
+    final availableHeight = size.height - padding.vertical;
+    // Reserve space for the context-menu action sheet + breathing room.
+    const reservedForSheet = 140.0;
+    final maxPreviewHeight = (availableHeight - reservedForSheet).clamp(
+      160.0,
+      520.0,
+    );
+    final width = size.width - 40;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: width, maxHeight: maxPreviewHeight),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
+          child: SizedBox(width: width, child: logCard),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSection(String title, String? content) {
     if (content == null || content.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -400,6 +431,111 @@ class _LogItemBlockState extends State<LogItemBlock>
     );
 
     if (widget.isIOS) {
+      // Build a *collapsed* snapshot of the card for the context-menu preview
+      // so it never exceeds the viewport height.
+      final collapsedCard = Material(
+        color: Colors.transparent,
+        child: Container(
+          width: MediaQuery.of(context).size.width - 32,
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: CupertinoColors.systemGrey5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: LogColorHelper.getMethodColor(widget.log.method),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: LogColorHelper.getMethodColor(
+                                  widget.log.method,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                widget.log.method,
+                                style: TextStyle(
+                                  color: LogColorHelper.getMethodColor(
+                                    widget.log.method,
+                                  ),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              widget.log.statusCode?.toString() ?? 'PENDING',
+                              style: TextStyle(
+                                color: LogColorHelper.getStatusColor(
+                                  widget.log.statusCode,
+                                ),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.displayEndpoint,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: Colors.black,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${widget.log.durationMs}ms',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
       return CupertinoContextMenu.builder(
         enableHapticFeedback: true,
         actions: <Widget>[
@@ -420,7 +556,8 @@ class _LogItemBlockState extends State<LogItemBlock>
             child: const Text('Share (Full Data)'),
           ),
         ],
-        builder: (BuildContext context, Animation<double> animation) => card,
+        builder: (BuildContext menuContext, Animation<double> animation) =>
+            _iosContextMenuPreview(menuContext, collapsedCard),
       );
     } else {
       return GestureDetector(

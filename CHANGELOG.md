@@ -1,3 +1,21 @@
+## 1.7.2 - 2026-03-29
+
+### Fixed
+
+- Fixed `CupertinoContextMenu` crash caused by negative height constraints (`BoxConstraints has non-normalized height constraints`) when the expanded log card consumed nearly the full viewport, leaving no room for the context-menu action sheet.
+- Context-menu preview now uses a dedicated collapsed card snapshot instead of the live (potentially expanded) card, ensuring the preview always fits within the viewport.
+- Reserved a fixed 140px for the action sheet + safe-area padding; preview height is hard-capped and clipped to prevent overflow.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.7.2
+```
+
 ## 1.7.1 - 2026-03-29
 
 ### Fixed
