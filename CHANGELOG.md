@@ -1,3 +1,23 @@
+## 1.9.3 - 2026-03-29
+
+### Changed
+
+- **Screenshot PDF capture width**: Share exports now capture the expanded log card at the **normal on-screen card width** (viewport minus horizontal margin), not a widened offscreen width. Content remains **soft-wrapped** and **full-length** in a single-page image-based PDF.
+
+### Added
+
+- **`.cursorrules`**: Documented that any **commit request** must follow release prep: bump `pubspec.yaml`, update `CHANGELOG.md` and `README.md`, then commit (per `PRODUCTION_GUIDELINES.md`).
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.9.3
+```
+
 ## 1.9.2 - 2026-03-29
 
 ### Fixed

@@ -19,5 +19,9 @@ You are an AI assistant working on the `aun_api_logger` Flutter package. You mus
    - The `ref` in the dependency block MUST be the actual pushed git tag that contains that version's code changes.
    - The `README.md` dependency block MUST always show the latest version git tag.
    - **Workflow**: After committing and pushing a version bump, immediately update `CHANGELOG.md` and `README.md` with the pushed version git tag, then commit and push the ref update.
+8. **Commit Request Workflow (Always Treat As Release Prep)**:
+   - Whenever the user asks to create a commit, do **not** commit code changes first and update release files later.
+   - Before creating that commit, you MUST bump `pubspec.yaml` to the appropriate SemVer version, update `CHANGELOG.md`, and update the `README.md` dependency ref/code block to the same release version, following `PRODUCTION_GUIDELINES.md`.
+   - Only create the commit after those versioning and documentation updates are included in the same change set.
 
 Always check `PRODUCTION_GUIDELINES.md` if you are unsure about the release process.
