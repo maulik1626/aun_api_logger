@@ -1,8 +1,24 @@
+## 1.8.1 - 2026-03-29
+
+### Changed
+
+- PDF export uses **Satoshi** (Regular & Bold, `.otf`) as the embedded font family, aligned with Aun apps (e.g. `aun_pets/pets_customer/fonts`). Replaces Noto Sans for shared log PDFs.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.8.1
+```
+
 ## 1.8.0 - 2026-03-29
 
 ### Added
 
-- PDF export embeds **Noto Sans** (Regular & Bold) from bundled assets for broad Unicode coverage and to avoid default Helvetica limitations (see `assets/fonts/README.txt` for OFL attribution).
+- PDF export embeds bundled font files (initially Noto Sans; superseded by **Satoshi** in 1.8.1) for broad Unicode coverage and to avoid default Helvetica limitations (see `assets/fonts/README.txt`).
 
 ### Changed
 

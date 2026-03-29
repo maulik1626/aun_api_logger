@@ -43,13 +43,14 @@ class PdfShareHelper {
     return PdfColors.red;
   }
 
+  /// Satoshi (OTF) embedded for all PDF text; `dart_pdf` loads it via [pw.Font.ttf].
   static Future<pw.ThemeData> _loadTheme() async {
     try {
       final regular = await rootBundle.load(
-        'packages/aun_api_logger/assets/fonts/NotoSans-Regular.ttf',
+        'packages/aun_api_logger/assets/fonts/Satoshi-Regular.otf',
       );
       final bold = await rootBundle.load(
-        'packages/aun_api_logger/assets/fonts/NotoSans-Bold.ttf',
+        'packages/aun_api_logger/assets/fonts/Satoshi-Bold.otf',
       );
       return pw.ThemeData.withFont(
         base: pw.Font.ttf(regular),

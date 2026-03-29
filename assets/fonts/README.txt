@@ -1,4 +1,4 @@
-Noto Sans (Regular and Bold TTF files in this folder)
-Copyright 2022 The Noto Project Authors (https://github.com/notofonts/noto-fonts)
-Licensed under the SIL Open Font License, Version 1.1.
-Source: https://github.com/googlefonts/noto-fonts
+Satoshi (Regular, Bold) — OTF files bundled for PDF export.
+
+Use the same family as the Aun consumer apps (e.g. aun_pets/pets_customer/fonts).
+Refer to your Satoshi / Fontshare license for redistribution terms.
