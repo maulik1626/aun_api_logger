@@ -1,3 +1,30 @@
+## 1.6.0 - 2026-03-29
+
+### Added
+
+- Feature: Implemented adaptive long-press share interactions on log cards.
+  - iOS devices now use `CupertinoContextMenu` native interactions.
+  - Android devices use an elegant `ModalBottomSheet`.
+- Feature: Share logic extracts and strips sensitive Auth headers dynamically, offering "Share (Without Auth)" and "Share (Full Data)" actions.
+- Feature: Added `screenshot` dependency to capture the exact expanded UI of logs off-screen for beautiful sharing formatting.
+- Feature: Method badges now color-code logically reflecting Postman colors (`GET`=Blue, `POST`=Green, `PUT`=Orange, `DELETE`=Red).
+- Feature: Response status text changes color exactly reflecting their status group (`200`s=Green, `400`s=Orange, `500`s=Red).
+
+### Changed
+
+- Reconstructed image share output to use a dedicated isolated renderer widget `SharedLogCardWidget` ensuring screenshot safety independent from local UI adjustments.
+- Offloaded core parsing behaviors (`getStatusColor`, `getMethodColor`, `getRequestBodyType`) into `utils/` for globally synced usages across `SharedLogCardWidget` and main screens.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v1.6.0
+```
+
 ## 1.5.2 - 2026-03-25
 
 ### Added
