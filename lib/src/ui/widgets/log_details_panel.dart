@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/api_log_model.dart';
 import '../../utils/log_helper.dart';
 import 'log_item_block.dart'; // For JsonCodeBlock
+import 'searchable_json_code_block.dart';
 
 class LogDetailsPanel extends StatelessWidget {
   final ApiLogModel log;
@@ -31,6 +32,28 @@ class LogDetailsPanel extends StatelessWidget {
     );
   }
 
+  Widget _buildResponseBodySection(String? content) {
+    if (content == null || content.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Response Body',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          SearchableJsonCodeBlock(content: content, isIOS: isIOS),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -43,7 +66,7 @@ class LogDetailsPanel extends StatelessWidget {
           log.requestBody,
         ),
         _buildSection('Response Headers', log.responseHeaders),
-        _buildSection('Response Body', log.responseBody),
+        _buildResponseBodySection(log.responseBody),
       ],
     );
   }

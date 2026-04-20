@@ -1,3 +1,26 @@
+## 2.2.0 - 2026-04-20
+
+### Added
+
+- **Searchable Response Body**: The "Response Body" block now features a dedicated in-block search bar with:
+  - Live search with 200ms debounce for smooth UX on large payloads.
+  - Yellow highlight for all occurrences, orange highlight for the active match.
+  - Match counter badge showing `X of Y` results.
+  - Up (∧) and Down (∨) navigation arrows that smoothly scroll to each match.
+  - Virtualized `ListView.builder` rendering with fixed `itemExtent` for O(1) scroll-to-match on huge payloads (≥ 100 lines).
+  - Graceful degradation to a standard scrollable column for small responses.
+- **New widget**: `SearchableJsonCodeBlock` in `lib/src/ui/widgets/searchable_json_code_block.dart`.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v2.2.0
+```
+
 ## 2.1.0 - 2026-04-20
 
 ### Added
