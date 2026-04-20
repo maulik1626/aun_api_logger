@@ -1,7 +1,9 @@
 import 'dart:convert';
+// ignore: depend_on_referenced_packages
 import 'package:dio/dio.dart';
 import '../core/api_log_model.dart';
 import '../storage/local_storage_service.dart';
+import '../utils/encode_helper.dart';
 
 class ApiLoggerInterceptor extends Interceptor {
   // We use extra map to pass the generated log ID between Request, Response, Error.
@@ -103,9 +105,9 @@ class ApiLoggerInterceptor extends Interceptor {
 
   String _tryEncode(dynamic data) {
     if (data == null) return '';
-    try {
-      if (data is String) return data;
-      if (data is FormData) {
+    // Handle Dio-specific FormData type.
+    if (data is FormData) {
+      try {
         final map = <String, dynamic>{};
         if (data.fields.isNotEmpty) {
           map['fields'] = Map.fromEntries(
@@ -121,10 +123,11 @@ class ApiLoggerInterceptor extends Interceptor {
               .toList();
         }
         return const JsonEncoder.withIndent('  ').convert(map);
+      } catch (e) {
+        return data.toString();
       }
-      return const JsonEncoder.withIndent('  ').convert(data);
-    } catch (e) {
-      return data.toString();
     }
+    // Delegate to shared helper for all other types.
+    return tryEncodeJson(data);
   }
 }

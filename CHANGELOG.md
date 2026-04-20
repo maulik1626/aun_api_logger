@@ -1,3 +1,30 @@
+## 2.0.0 - 2026-04-20
+
+### Added
+
+- **`package:http` support**: New `ApiLoggerHttpClient` — a drop-in `BaseClient` adapter that logs every request/response via `send()` interception. Supports `http.get`, `http.post`, `http.MultipartRequest`, and all other `BaseClient` methods.
+- **`dart:io HttpClient` support**: New `ApiLoggerIoHttpClient` — a full `HttpClient` wrapper that intercepts `openUrl` and `request.close()` to log the complete request → response lifecycle. All `HttpClient` properties and convenience methods are delegated.
+- **Shared encode helper**: Extracted `tryEncodeJson()` into `lib/src/utils/encode_helper.dart` for reuse across all interceptors.
+
+### Changed
+
+- **BREAKING**: `dio` is no longer a direct dependency. Dio users must add `dio` to their own `pubspec.yaml` and import the interceptor directly:
+  ```dart
+  import 'package:aun_api_logger/src/interceptors/api_logger_interceptor.dart';
+  ```
+- **BREAKING**: The barrel export (`aun_api_logger.dart`) no longer exports `ApiLoggerInterceptor` (Dio). It now exports `ApiLoggerHttpClient` and `ApiLoggerIoHttpClient` by default.
+- Added `http: ^1.3.0` as a dependency.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v2.0.0
+```
+
 ## 1.9.6 - 2026-03-29
 
 ### Changed
