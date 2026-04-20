@@ -47,7 +47,7 @@ class ApiLoggerHttpClient extends http.BaseClient {
         url: request.url.toString(),
         endpoint: request.url.path,
         requestHeaders: tryEncodeJson(request.headers),
-        requestBody: requestBody,
+        requestBody: tryEncodeJson(requestBody),
         requestTime: requestTime,
       );
       logId = await LocalStorageService.instance.insertLog(log);
@@ -74,10 +74,10 @@ class ApiLoggerHttpClient extends http.BaseClient {
             url: request.url.toString(),
             endpoint: request.url.path,
             requestHeaders: tryEncodeJson(request.headers),
-            requestBody: requestBody,
+            requestBody: tryEncodeJson(requestBody),
             statusCode: streamedResponse.statusCode,
             responseHeaders: tryEncodeJson(streamedResponse.headers),
-            responseBody: responseBody,
+            responseBody: tryEncodeJson(responseBody),
             requestTime: requestTime,
             durationMs: duration,
           );
@@ -109,9 +109,9 @@ class ApiLoggerHttpClient extends http.BaseClient {
             url: request.url.toString(),
             endpoint: request.url.path,
             requestHeaders: tryEncodeJson(request.headers),
-            requestBody: requestBody,
+            requestBody: tryEncodeJson(requestBody),
             statusCode: 0,
-            responseBody: error.toString(),
+            responseBody: tryEncodeJson(error.toString()),
             requestTime: requestTime,
             durationMs: duration,
           );

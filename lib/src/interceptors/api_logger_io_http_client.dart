@@ -220,7 +220,7 @@ class _LoggingRequest implements HttpClientRequest {
         url: _url.toString(),
         endpoint: _url.path,
         requestHeaders: tryEncodeJson(reqHeaders),
-        requestBody: requestBody,
+        requestBody: tryEncodeJson(requestBody),
         requestTime: requestTime,
       );
       logId = await LocalStorageService.instance.insertLog(log);
@@ -250,10 +250,10 @@ class _LoggingRequest implements HttpClientRequest {
             url: _url.toString(),
             endpoint: _url.path,
             requestHeaders: tryEncodeJson(reqHeaders),
-            requestBody: requestBody,
+            requestBody: tryEncodeJson(requestBody),
             statusCode: response.statusCode,
             responseHeaders: tryEncodeJson(resHeaders),
-            responseBody: _tryDecodeBytes(responseBytes),
+            responseBody: tryEncodeJson(_tryDecodeBytes(responseBytes)),
             requestTime: requestTime,
             durationMs: duration,
           );
@@ -277,9 +277,9 @@ class _LoggingRequest implements HttpClientRequest {
             url: _url.toString(),
             endpoint: _url.path,
             requestHeaders: tryEncodeJson(reqHeaders),
-            requestBody: requestBody,
+            requestBody: tryEncodeJson(requestBody),
             statusCode: 0,
-            responseBody: error.toString(),
+            responseBody: tryEncodeJson(error.toString()),
             requestTime: requestTime,
             durationMs: duration,
           );

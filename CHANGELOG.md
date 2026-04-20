@@ -1,3 +1,19 @@
+## 2.0.1 - 2026-04-20
+
+### Fixed
+
+- **JSON String Formatting**: Fixed an issue where the new HTTP interceptors stored minified JSON responses as single-line strings. The `tryEncodeJson` helper now actively attempts to decode string payloads and re-encodes them with proper indentation before storage.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v2.0.1
+```
+
 ## 2.0.0 - 2026-04-20
 
 ### Added
