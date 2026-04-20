@@ -1,3 +1,25 @@
+## 2.2.1 - 2026-04-20
+
+### Changed
+
+- **Searchable Response Body — toolbar polish**: Redesigned the `SearchableJsonCodeBlock` toolbar for a more intuitive, production-grade UX:
+  - **Left**: A compact "Search" pill that expands inline to the full search bar with match counter, up/down nav arrows, and a close button.
+  - **Right**: Copy and Wrap icons are now always visible and pinned to the right, separated by a subtle vertical divider.
+  - Toolbar sits on a distinct grey `50` surface with a bottom border, visually separating it from the code content.
+  - Active Wrap icon turns blue to indicate the current state.
+  - Match counter badge uses pill-shaped corners for a polished look.
+  - Floating SnackBar style for the copy confirmation.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v2.2.1
+```
+
 ## 2.2.0 - 2026-04-20
 
 ### Added

@@ -53,7 +53,7 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
 
   // ── Fixed line height for O(1) scroll-to-match ────────────────────────────
   static const double _lineHeight = 20.0;
-  // ── Number of lines to show before enabling virtualisation ────────────────
+  // ── Number of lines to enable virtualisation ─────────────────────────────
   static const int _virtualisationThreshold = 100;
 
   late List<String> _lines;
@@ -122,7 +122,9 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
       while (true) {
         final idx = lineLower.indexOf(lower, start);
         if (idx == -1) break;
-        newMatches.add(_SearchMatch(lineIndex: i, start: idx, end: idx + query.length));
+        newMatches.add(
+          _SearchMatch(lineIndex: i, start: idx, end: idx + query.length),
+        );
         start = idx + query.length;
       }
     }
@@ -159,33 +161,16 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
   void _scrollToActive() {
     if (_activeIndex < 0 || _activeIndex >= _matches.length) return;
     if (!_scrollController.hasClients) return;
-
-    // Only apply fixed-height jump when not in wrap mode (wrap mode has variable heights)
-    if (!_softWrap && _lines.length >= _virtualisationThreshold) {
-      final targetLine = _matches[_activeIndex].lineIndex;
-      final targetOffset = (targetLine * _lineHeight).clamp(
-        0.0,
-        _scrollController.position.maxScrollExtent,
-      );
-      _scrollController.animateTo(
-        targetOffset,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeInOut,
-      );
-    }
-    // For short content / wrap mode, rely on the same offset estimation:
-    else {
-      final targetLine = _matches[_activeIndex].lineIndex;
-      final estimatedOffset = (targetLine * _lineHeight).clamp(
-        0.0,
-        _scrollController.position.maxScrollExtent,
-      );
-      _scrollController.animateTo(
-        estimatedOffset,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeInOut,
-      );
-    }
+    final targetLine = _matches[_activeIndex].lineIndex;
+    final targetOffset = (targetLine * _lineHeight).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+    _scrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _clearSearch() {
@@ -196,6 +181,20 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
       _activeIndex = -1;
       _searchVisible = false;
     });
+  }
+
+  void _onCopy() {
+    HapticFeedback.lightImpact();
+    Clipboard.setData(ClipboardData(text: widget.content));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Response body copied'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
+    );
   }
 
   // ── Syntax highlighting ───────────────────────────────────────────────────
@@ -233,12 +232,18 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
       } else if (m.group(4) != null) {
         spans.add(TextSpan(
           text: m.group(4),
-          style: const TextStyle(color: _numberColor, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: _numberColor,
+            fontWeight: FontWeight.w600,
+          ),
         ));
       } else if (m.group(5) != null) {
         spans.add(TextSpan(
           text: m.group(5),
-          style: const TextStyle(color: _boolNullColor, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: _boolNullColor,
+            fontWeight: FontWeight.bold,
+          ),
         ));
       } else if (m.group(6) != null) {
         spans.add(TextSpan(
@@ -260,16 +265,12 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
     return spans;
   }
 
-  /// Builds a line's TextSpan list overlaid with search highlights.
-  /// Strategy: flatten existing spans into char segments, then inject
-  /// background colours for match ranges.
   List<InlineSpan> _buildHighlightedLine(int lineIndex) {
     final line = _lines[lineIndex];
     if (_query.isEmpty || line.isEmpty) {
       return _syntaxHighlight(line);
     }
 
-    // Collect match ranges on this line + which are "active"
     final lineMatchRanges = <(int start, int end, bool active)>[];
     for (int mi = 0; mi < _matches.length; mi++) {
       final m = _matches[mi];
@@ -282,18 +283,15 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
       return _syntaxHighlight(line);
     }
 
-    // Build result by splitting the line at match boundaries
     final result = <InlineSpan>[];
     int cursor = 0;
 
-    // Merge sort is unnecessary: matches on same line are already ordered
     for (final (start, end, isActive) in lineMatchRanges) {
       if (cursor < start) {
         result.addAll(_syntaxHighlight(line.substring(cursor, start)));
       }
-      final matchText = line.substring(start, end);
       result.add(TextSpan(
-        text: matchText,
+        text: line.substring(start, end),
         style: TextStyle(
           color: Colors.black,
           backgroundColor: isActive ? _activeHighlight : _inactiveHighlight,
@@ -312,149 +310,186 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
     return result;
   }
 
-  // ── Toolbar builder ───────────────────────────────────────────────────────
+  // ── Toolbar ───────────────────────────────────────────────────────────────
+  //
+  // Layout (always):
+  //   [ SEARCH AREA — Expanded ]  │  [ COPY ]  [ WRAP ]
+  //
+  // Search area states
+  //   Collapsed → compact pill showing search icon + label
+  //   Expanded  → text field + counter badge + ↑↓ nav + ✕
 
   Widget _buildToolbar() {
-    final hasMatches = _matches.isNotEmpty;
-    final matchLabel = _query.isEmpty
-        ? ''
-        : hasMatches
-            ? '${_activeIndex + 1} of ${_matches.length}'
-            : 'No results';
-    final labelColor = hasMatches ? Colors.orange.shade700 : Colors.red.shade400;
-
     return Row(
       children: [
-        // ── Search bar (animates in) ────────────────────────────────────────
+        // ── Left: search area (takes all remaining space) ──────────────────
         Expanded(
           child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: child,
+            ),
             child: _searchVisible
-                ? _buildSearchBar(matchLabel, labelColor)
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _toolbarIcon(
-                        icon: widget.isIOS
-                            ? CupertinoIcons.search
-                            : Icons.search_rounded,
-                        tooltip: 'Search response',
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          setState(() => _searchVisible = true);
-                          // Autofocus handled below
-                        },
-                      ),
-                      _toolbarIcon(
-                        icon: widget.isIOS
-                            ? CupertinoIcons.doc_on_doc
-                            : Icons.copy_rounded,
-                        tooltip: 'Copy',
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Clipboard.setData(ClipboardData(text: widget.content));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Copied to clipboard'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
-                      ),
-                      _toolbarIcon(
-                        icon: _softWrap
-                            ? (widget.isIOS
-                                ? CupertinoIcons.arrow_right_arrow_left
-                                : Icons.wrap_text_rounded)
-                            : (widget.isIOS
-                                ? CupertinoIcons.text_alignleft
-                                : Icons.short_text_rounded),
-                        tooltip: _softWrap ? 'Unwrap' : 'Wrap',
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _softWrap = !_softWrap);
-                        },
-                      ),
-                    ],
-                  ),
+                ? _buildSearchExpandedRow()
+                : _buildSearchCollapsedButton(),
           ),
+        ),
+        // ── Separator ─────────────────────────────────────────────────────
+        _divider(),
+        // ── Right: persistent copy + wrap ─────────────────────────────────
+        _iconButton(
+          icon: widget.isIOS
+              ? CupertinoIcons.doc_on_doc
+              : Icons.copy_rounded,
+          tooltip: 'Copy to clipboard',
+          onTap: _onCopy,
+        ),
+        _iconButton(
+          icon: _softWrap
+              ? (widget.isIOS
+                  ? CupertinoIcons.arrow_right_arrow_left
+                  : Icons.wrap_text_rounded)
+              : (widget.isIOS
+                  ? CupertinoIcons.text_alignleft
+                  : Icons.short_text_rounded),
+          tooltip: _softWrap ? 'Unwrap lines' : 'Wrap lines',
+          active: _softWrap,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _softWrap = !_softWrap);
+          },
         ),
       ],
     );
   }
 
-  Widget _buildSearchBar(String matchLabel, Color labelColor) {
+  /// Collapsed: small rounded pill — "🔍 Search"
+  Widget _buildSearchCollapsedButton() {
+    return Align(
+      key: const ValueKey('collapsed'),
+      alignment: Alignment.centerLeft,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          setState(() => _searchVisible = true);
+        },
+        child: Container(
+          height: 28,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                widget.isIOS ? CupertinoIcons.search : Icons.search_rounded,
+                size: 13,
+                color: Colors.grey.shade500,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                'Search',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Expanded: text field + counter + up/down + close
+  Widget _buildSearchExpandedRow() {
+    final hasQuery = _query.isNotEmpty;
+    final hasMatches = _matches.isNotEmpty;
+
     return Row(
+      key: const ValueKey('expanded'),
       children: [
         // ── Text field ─────────────────────────────────────────────────────
         Expanded(
           child: Container(
-            height: 34,
+            height: 30,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: _query.isNotEmpty && _matches.isEmpty
+                color: hasQuery && !hasMatches
                     ? Colors.red.shade300
-                    : Colors.grey.shade300,
+                    : Colors.blue.shade200,
+                width: 1.2,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.shade50,
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
             child: TextField(
               controller: _searchController,
               autofocus: true,
               onChanged: _onSearchChanged,
-              style: const TextStyle(fontSize: 13),
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF212121),
+              ),
               decoration: InputDecoration(
                 hintText: 'Find in response…',
-                hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                hintStyle: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade400,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 0,
+                ),
                 isDense: true,
                 border: InputBorder.none,
-                prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 28,
+                  minHeight: 28,
+                ),
                 prefixIcon: Icon(
                   Icons.search_rounded,
-                  size: 16,
-                  color: Colors.grey.shade500,
+                  size: 14,
+                  color: Colors.blue.shade300,
                 ),
               ),
             ),
           ),
         ),
         const SizedBox(width: 6),
-        // ── Match counter ──────────────────────────────────────────────────
-        if (_query.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-            decoration: BoxDecoration(
-              color: _matches.isEmpty ? Colors.red.shade50 : Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: _matches.isEmpty ? Colors.red.shade200 : Colors.orange.shade200,
-              ),
-            ),
-            child: Text(
-              matchLabel,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: labelColor,
-              ),
-            ),
-          ),
-        const SizedBox(width: 4),
-        // ── Up arrow ───────────────────────────────────────────────────────
+        // ── Match counter badge ────────────────────────────────────────────
+        if (hasQuery) _matchBadge(hasMatches),
+        if (hasQuery) const SizedBox(width: 4),
+        // ── Nav: prev ─────────────────────────────────────────────────────
         _navButton(
-          icon: widget.isIOS ? CupertinoIcons.chevron_up : Icons.keyboard_arrow_up_rounded,
-          onTap: _matches.isEmpty ? null : _navigatePrev,
+          icon: widget.isIOS
+              ? CupertinoIcons.chevron_up
+              : Icons.keyboard_arrow_up_rounded,
+          enabled: hasMatches,
+          onTap: _navigatePrev,
         ),
-        // ── Down arrow ─────────────────────────────────────────────────────
+        // ── Nav: next ─────────────────────────────────────────────────────
         _navButton(
-          icon: widget.isIOS ? CupertinoIcons.chevron_down : Icons.keyboard_arrow_down_rounded,
-          onTap: _matches.isEmpty ? null : _navigateNext,
+          icon: widget.isIOS
+              ? CupertinoIcons.chevron_down
+              : Icons.keyboard_arrow_down_rounded,
+          enabled: hasMatches,
+          onTap: _navigateNext,
         ),
         // ── Close ─────────────────────────────────────────────────────────
-        _toolbarIcon(
+        _iconButton(
           icon: widget.isIOS ? CupertinoIcons.xmark : Icons.close_rounded,
           tooltip: 'Close search',
           onTap: _clearSearch,
@@ -463,39 +498,90 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
     );
   }
 
-  Widget _toolbarIcon({
-    required IconData icon,
-    required VoidCallback onTap,
-    String? tooltip,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Tooltip(
-        message: tooltip ?? '',
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Icon(icon, size: 18, color: Colors.grey.shade600),
+  Widget _matchBadge(bool hasMatches) {
+    final label = hasMatches
+        ? '${_activeIndex + 1} / ${_matches.length}'
+        : 'No results';
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: hasMatches
+            ? const Color(0xFFFFF3E0)
+            : const Color(0xFFFFEBEE),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: hasMatches
+              ? const Color(0xFFFFCC80)
+              : const Color(0xFFEF9A9A),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: hasMatches ? Colors.orange.shade800 : Colors.red.shade400,
+          letterSpacing: 0.2,
         ),
       ),
     );
   }
 
-  Widget _navButton({required IconData icon, required VoidCallback? onTap}) {
-    final enabled = onTap != null;
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: enabled ? Colors.grey.shade100 : Colors.transparent,
-            borderRadius: BorderRadius.circular(6),
-          ),
+  Widget _divider() {
+    return Container(
+      width: 1,
+      height: 18,
+      margin: const EdgeInsets.symmetric(horizontal: 6),
+      color: Colors.grey.shade200,
+    );
+  }
+
+  Widget _iconButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    String? tooltip,
+    bool active = false,
+  }) {
+    return Tooltip(
+      message: tooltip ?? '',
+      waitDuration: const Duration(milliseconds: 500),
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
           child: Icon(
             icon,
-            size: 18,
+            size: 17,
+            color: active ? Colors.blue.shade600 : Colors.grey.shade500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navButton({
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 26,
+        height: 26,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+          color: enabled ? Colors.grey.shade100 : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: enabled ? Border.all(color: Colors.grey.shade200) : null,
+        ),
+        child: Center(
+          child: Icon(
+            icon,
+            size: 16,
             color: enabled ? Colors.grey.shade700 : Colors.grey.shade300,
           ),
         ),
@@ -511,7 +597,6 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
     Widget listView;
 
     if (isVirtualised) {
-      // Use fixed itemExtent for perfect O(1) scroll-to-index
       listView = ListView.builder(
         controller: _scrollController,
         itemCount: _lines.length,
@@ -522,7 +607,7 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
           return SelectionArea(
             child: RichText(
               softWrap: _softWrap,
-              overflow: _softWrap ? TextOverflow.visible : TextOverflow.visible,
+              overflow: TextOverflow.visible,
               text: TextSpan(
                 children: _buildHighlightedLine(index),
                 style: const TextStyle(
@@ -536,7 +621,6 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
         },
       );
     } else {
-      // Short content: render as single scrollable SelectableText
       listView = SingleChildScrollView(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -567,11 +651,12 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
     }
 
     return SizedBox(
-      height: isVirtualised ? 400 : (_lines.length * _lineHeight).clamp(60, 400),
+      height: isVirtualised
+          ? 400
+          : (_lines.length * _lineHeight).clamp(60.0, 400.0),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: SizedBox(
-          // Give enough width to avoid wrapping
           width: 2000,
           child: listView,
         ),
@@ -594,12 +679,20 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Toolbar ───────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+          // ── Toolbar (distinct surface) ────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.fromLTRB(10, 6, 8, 6),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(8),
+              ),
+              border: Border(
+                bottom: BorderSide(color: Colors.grey.shade200),
+              ),
+            ),
             child: _buildToolbar(),
           ),
-          // ── Search bar row (shown when active + wide layout) ──────────────
           // ── Content ───────────────────────────────────────────────────────
           _buildContent(),
         ],
