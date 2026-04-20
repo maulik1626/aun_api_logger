@@ -8,11 +8,11 @@ import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
 import '../../core/api_log_model.dart';
 import '../../utils/color_helper.dart';
-import '../../utils/log_helper.dart';
 import '../../utils/image_share_helper.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'shared_log_capture_card.dart';
+import 'log_details_panel.dart';
 
 class LogItemBlock extends StatefulWidget {
   final ApiLogModel log;
@@ -337,27 +337,7 @@ class _LogItemBlockState extends State<LogItemBlock>
     );
   }
 
-  Widget _buildSection(String title, String? content) {
-    if (content == null || content.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(top: 12.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 6),
-          JsonCodeBlock(content: content, isIOS: widget.isIOS),
-        ],
-      ),
-    );
-  }
+  // Details rendering moved to LogDetailsPanel
 
   @override
   Widget build(BuildContext context) {
@@ -576,22 +556,9 @@ class _LogItemBlockState extends State<LogItemBlock>
                                 height: 1,
                                 color: Color(0xFFEEEEEE),
                               ),
-                              _buildSection('URL', widget.log.url),
-                              _buildSection(
-                                'Request Headers',
-                                widget.log.requestHeaders,
-                              ),
-                              _buildSection(
-                                'Request Body${LogHelper.getRequestBodyType(widget.log.requestHeaders)}',
-                                widget.log.requestBody,
-                              ),
-                              _buildSection(
-                                'Response Headers',
-                                widget.log.responseHeaders,
-                              ),
-                              _buildSection(
-                                'Response Body',
-                                widget.log.responseBody,
+                              LogDetailsPanel(
+                                log: widget.log,
+                                isIOS: widget.isIOS,
                               ),
                             ],
                           ),

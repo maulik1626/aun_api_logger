@@ -1,5 +1,26 @@
-## 2.0.1 - 2026-04-20
+## 2.1.0 - 2026-04-20
 
+### Added
+
+- **Tablet Split-Panel UI**: `DayLogsScreen` now features an adaptive layout. On devices with a screen width of 768px or wider (e.g. iPads), the UI transforms into a 30:70 split-panel.
+  - The left panel displays a scrollable, compact list of logs.
+  - Tapping a log instantly displays its full details (headers, bodies, and syntax highlighting) in the right panel.
+
+### Changed
+
+- Extracted `LogDetailsPanel` and `LogListTile` widgets for better reusability and cleaner code structure.
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v2.1.0
+```
+
+## 2.0.1 - 2026-04-20
 ### Fixed
 
 - **JSON String Formatting**: Fixed an issue where the new HTTP interceptors stored minified JSON responses as single-line strings. The `tryEncodeJson` helper now actively attempts to decode string payloads and re-encodes them with proper indentation before storage.

@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import '../../core/api_log_model.dart';
 import '../../storage/local_storage_service.dart';
 import '../../utils/export_helper.dart';
+import '../../utils/color_helper.dart';
 import '../widgets/log_item_block.dart';
+import '../widgets/log_list_tile.dart';
+import '../widgets/log_details_panel.dart';
+import 'package:intl/intl.dart';
 
 class DayLogsScreen extends StatefulWidget {
   final String dateStr;
@@ -25,6 +29,7 @@ class DayLogsScreenState extends State<DayLogsScreen> {
   String _searchQuery = '';
   String? _selectedGroup;
   LogFilter _currentFilter = LogFilter.all;
+  ApiLogModel? _selectedLog;
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -148,6 +153,11 @@ class DayLogsScreenState extends State<DayLogsScreen> {
     }
 
     _filteredLogs = result;
+    if (_filteredLogs.isEmpty) {
+      _selectedLog = null;
+    } else if (_selectedLog == null || !_filteredLogs.contains(_selectedLog)) {
+      _selectedLog = _filteredLogs.first;
+    }
   }
 
   void _showIOSFilterSheet(BuildContext context) {
@@ -196,6 +206,117 @@ class DayLogsScreenState extends State<DayLogsScreen> {
     );
   }
 
+  Widget _buildTabletDetailsPanel(bool isIOS) {
+    if (_selectedLog == null) {
+      return Center(
+        child: Text(
+          'Select a log to view details',
+          style: TextStyle(
+            color: isIOS ? CupertinoColors.systemGrey : Colors.grey.shade600,
+          ),
+        ),
+      );
+    }
+
+    final format = DateFormat('hh:mm:ss a');
+    final timeStr = format.format(
+      DateTime.fromMillisecondsSinceEpoch(_selectedLog!.requestTime),
+    );
+    final statusColor = LogColorHelper.getStatusColor(_selectedLog!.statusCode);
+
+    return Container(
+      color: Colors.white,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(
+                  color:
+                      isIOS ? CupertinoColors.systemGrey5 : Colors.grey.shade200,
+                ),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: LogColorHelper.getMethodColor(
+                          _selectedLog!.method,
+                        ).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _selectedLog!.method,
+                        style: TextStyle(
+                          color: LogColorHelper.getMethodColor(
+                            _selectedLog!.method,
+                          ),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      _selectedLog!.statusCode?.toString() ?? 'PENDING',
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '$timeStr  •  ${_selectedLog!.durationMs}ms',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _getDisplayPath(
+                    _selectedLog!.endpoint.isNotEmpty
+                        ? _selectedLog!.endpoint
+                        : _selectedLog!.url,
+                  ),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Scrollable details
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: LogDetailsPanel(log: _selectedLog!, isIOS: isIOS),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBody(bool isIOS) {
     if (_isLoading) {
       return Center(
@@ -205,210 +326,265 @@ class DayLogsScreenState extends State<DayLogsScreen> {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: isIOS
-              ? CupertinoSearchTextField(
-                  controller: _searchController,
-                  placeholder: 'Search exact endpoints...',
-                )
-              : TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search exact endpoints...',
-                    prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded),
-                            onPressed: () {
-                              _searchController.clear();
-                              FocusScope.of(context).unfocus();
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isTablet = constraints.maxWidth >= 768;
 
-        if (_uniqueGroups.isNotEmpty)
-          SizedBox(
-            height: 40,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _uniqueGroups.length,
-              itemBuilder: (context, index) {
-                final group = _uniqueGroups[index];
-                final isSelected = _selectedGroup == group;
-                final activeColor = isIOS
-                    ? CupertinoColors.activeBlue
-                    : Theme.of(context).primaryColor;
-
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(
-                      group,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected ? Colors.white : Colors.black87,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
+        final listContent = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: isIOS
+                  ? CupertinoSearchTextField(
+                      controller: _searchController,
+                      placeholder: 'Search exact endpoints...',
+                    )
+                  : TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search exact endpoints...',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  FocusScope.of(context).unfocus();
+                                },
+                              )
+                            : null,
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                       ),
                     ),
-                    selected: isSelected,
-                    onSelected: (bool selected) {
-                      setState(() {
-                        _selectedGroup = selected ? group : null;
-                        _applyFilters();
-                      });
-                    },
-                    showCheckmark: false,
-                    backgroundColor: isIOS
-                        ? CupertinoColors.systemGrey6
-                        : Colors.grey.shade100,
-                    selectedColor: activeColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: isSelected
-                            ? Colors.transparent
-                            : Colors.grey.shade300,
-                      ),
-                    ),
-                  ),
-                );
-              },
             ),
-          ),
 
-        if (_allLogs.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Showing ${_filteredLogs.length} logs',
-                  style: TextStyle(
-                    color: isIOS
-                        ? CupertinoColors.systemGrey
-                        : Colors.grey.shade600,
-                    fontSize: 13,
-                  ),
-                ),
-                if (!isIOS)
-                  PopupMenuButton<LogFilter>(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.filter_list_rounded,
-                          size: 16,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Filter',
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                    onSelected: (LogFilter result) {
-                      setState(() {
-                        _currentFilter = result;
-                        _applyFilters();
-                      });
-                    },
-                    itemBuilder: (BuildContext context) =>
-                        <PopupMenuEntry<LogFilter>>[
-                          const PopupMenuItem<LogFilter>(
-                            value: LogFilter.all,
-                            child: Text('All Methods/Statuses'),
-                          ),
-                          const PopupMenuItem<LogFilter>(
-                            value: LogFilter.success,
-                            child: Text('Success (2xx)'),
-                          ),
-                          const PopupMenuItem<LogFilter>(
-                            value: LogFilter.error,
-                            child: Text('Errors (4xx, 5xx)'),
-                          ),
-                          const PopupMenuItem<LogFilter>(
-                            value: LogFilter.get,
-                            child: Text('GET'),
-                          ),
-                          const PopupMenuItem<LogFilter>(
-                            value: LogFilter.post,
-                            child: Text('POST'),
-                          ),
-                          const PopupMenuItem<LogFilter>(
-                            value: LogFilter.put,
-                            child: Text('PUT'),
-                          ),
-                          const PopupMenuItem<LogFilter>(
-                            value: LogFilter.delete,
-                            child: Text('DELETE'),
-                          ),
-                        ],
-                  ),
-              ],
-            ),
-          ),
-        Expanded(
-          child: _filteredLogs.isEmpty
-              ? Center(
-                  child: Text(
-                    _allLogs.isEmpty
-                        ? 'No logs found.'
-                        : 'No logs match filter.',
-                    style: TextStyle(
-                      color: isIOS
-                          ? CupertinoColors.systemGrey
-                          : Colors.grey.shade600,
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  itemCount: _filteredLogs.length,
+            if (_uniqueGroups.isNotEmpty)
+              SizedBox(
+                height: 40,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _uniqueGroups.length,
                   itemBuilder: (context, index) {
-                    final log = _filteredLogs[index];
-                    return LogItemBlock(
-                      log: log,
-                      isIOS: isIOS,
-                      displayEndpoint: _getDisplayPath(
-                        log.endpoint.isNotEmpty ? log.endpoint : log.url,
+                    final group = _uniqueGroups[index];
+                    final isSelected = _selectedGroup == group;
+                    final activeColor = isIOS
+                        ? CupertinoColors.activeBlue
+                        : Theme.of(context).primaryColor;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: FilterChip(
+                        label: Text(
+                          group,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected ? Colors.white : Colors.black87,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        selected: isSelected,
+                        onSelected: (bool selected) {
+                          setState(() {
+                            _selectedGroup = selected ? group : null;
+                            _applyFilters();
+                          });
+                        },
+                        showCheckmark: false,
+                        backgroundColor: isIOS
+                            ? CupertinoColors.systemGrey6
+                            : Colors.grey.shade100,
+                        selectedColor: activeColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color: isSelected
+                                ? Colors.transparent
+                                : Colors.grey.shade300,
+                          ),
+                        ),
                       ),
                     );
                   },
                 ),
-        ),
-      ],
+              ),
+
+            if (_allLogs.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Showing ${_filteredLogs.length} logs',
+                      style: TextStyle(
+                        color: isIOS
+                            ? CupertinoColors.systemGrey
+                            : Colors.grey.shade600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (!isIOS && !isTablet)
+                      PopupMenuButton<LogFilter>(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.filter_list_rounded,
+                              size: 16,
+                              color: Theme.of(context).primaryColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Filter',
+                              style: TextStyle(
+                                color: Theme.of(context).primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                        onSelected: (LogFilter result) {
+                          setState(() {
+                            _currentFilter = result;
+                            _applyFilters();
+                          });
+                        },
+                        itemBuilder: (BuildContext context) =>
+                            <PopupMenuEntry<LogFilter>>[
+                              const PopupMenuItem<LogFilter>(
+                                value: LogFilter.all,
+                                child: Text('All Methods/Statuses'),
+                              ),
+                              const PopupMenuItem<LogFilter>(
+                                value: LogFilter.success,
+                                child: Text('Success (2xx)'),
+                              ),
+                              const PopupMenuItem<LogFilter>(
+                                value: LogFilter.error,
+                                child: Text('Errors (4xx, 5xx)'),
+                              ),
+                              const PopupMenuItem<LogFilter>(
+                                value: LogFilter.get,
+                                child: Text('GET'),
+                              ),
+                              const PopupMenuItem<LogFilter>(
+                                value: LogFilter.post,
+                                child: Text('POST'),
+                              ),
+                              const PopupMenuItem<LogFilter>(
+                                value: LogFilter.put,
+                                child: Text('PUT'),
+                              ),
+                              const PopupMenuItem<LogFilter>(
+                                value: LogFilter.delete,
+                                child: Text('DELETE'),
+                              ),
+                            ],
+                      ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: _filteredLogs.isEmpty
+                  ? Center(
+                      child: Text(
+                        _allLogs.isEmpty
+                            ? 'No logs found.'
+                            : 'No logs match filter.',
+                        style: TextStyle(
+                          color: isIOS
+                              ? CupertinoColors.systemGrey
+                              : Colors.grey.shade600,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      itemCount: _filteredLogs.length,
+                      itemBuilder: (context, index) {
+                        final log = _filteredLogs[index];
+                        final displayEndpoint = _getDisplayPath(
+                          log.endpoint.isNotEmpty ? log.endpoint : log.url,
+                        );
+
+                        if (isTablet) {
+                          return LogListTile(
+                            log: log,
+                            isSelected: _selectedLog?.id == log.id,
+                            isIOS: isIOS,
+                            displayEndpoint: displayEndpoint,
+                            onTap: () {
+                              setState(() {
+                                _selectedLog = log;
+                              });
+                            },
+                          );
+                        }
+
+                        return LogItemBlock(
+                          log: log,
+                          isIOS: isIOS,
+                          displayEndpoint: displayEndpoint,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+
+        if (isTablet) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Left Panel (30%)
+              Expanded(
+                flex: 3,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color:
+                        isIOS ? CupertinoColors.systemGroupedBackground : Colors.grey.shade50,
+                    border: Border(
+                      right: BorderSide(
+                        color:
+                            isIOS ? CupertinoColors.systemGrey5 : Colors.grey.shade300,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: listContent,
+                ),
+              ),
+              // Right Panel (70%)
+              Expanded(
+                flex: 7,
+                child: _buildTabletDetailsPanel(isIOS),
+              ),
+            ],
+          );
+        }
+
+        return listContent;
+      },
     );
   }
 
