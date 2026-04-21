@@ -417,7 +417,6 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
         // ── Text field ─────────────────────────────────────────────────────
         Expanded(
           child: Container(
-            height: 30,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
@@ -439,6 +438,7 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
               controller: _searchController,
               autofocus: true,
               onChanged: _onSearchChanged,
+              textAlignVertical: TextAlignVertical.center,
               style: const TextStyle(
                 fontSize: 12,
                 color: Color(0xFF212121),
@@ -451,7 +451,7 @@ class _SearchableJsonCodeBlockState extends State<SearchableJsonCodeBlock> {
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 8,
-                  vertical: 0,
+                  vertical: 7,
                 ),
                 isDense: true,
                 border: InputBorder.none,
