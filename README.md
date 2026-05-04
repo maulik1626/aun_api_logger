@@ -7,7 +7,7 @@ A standalone Flutter package designed to silently capture API traffic in debug m
 - **Local SQLite Storage**: Fast, persistent storage without external dependencies.
 - **Multi-Client Support**: Works with `package:http`, `dart:io HttpClient`, and Dio.
 - **Built-in UI**: Inspect logs grouped by day, view structured request/response blocks with pretty-printed JSON.
-- **Export & Share**: Download your entire history or just a specific day's logs. Copy individual JSON payloads easily.
+- **Export & Share**: Download your entire history or just a specific day's logs. Copy individual JSON payloads easily. Share a single log as a **Postman Collection v2.1** JSON file (full captured request, including tokens).
 
 ## Installation
 
@@ -26,7 +26,7 @@ dependencies:
   aun_api_logger:
     git:
       url: https://github.com/maulik1626/aun_api_logger.git
-      ref: v2.2.1
+      ref: v2.3.0
 ```
 
 Do not use moving refs like `main`.

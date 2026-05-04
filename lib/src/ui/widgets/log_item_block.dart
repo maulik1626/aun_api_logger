@@ -9,6 +9,7 @@ import 'package:screenshot/screenshot.dart';
 import '../../core/api_log_model.dart';
 import '../../utils/color_helper.dart';
 import '../../utils/image_share_helper.dart';
+import '../../utils/postman_collection_helper.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'shared_log_capture_card.dart';
@@ -223,6 +224,103 @@ class _LogItemBlockState extends State<LogItemBlock>
     }
   }
 
+  /// Swipe → Share: Postman Collection v2.1 JSON file (full captured data).
+  Future<void> _shareLogAsPostmanCollection() async {
+    if (_shareInProgress) {
+      return;
+    }
+    _shareInProgress = true;
+    File? shareFile;
+    var shareLoaderShown = false;
+    try {
+      if (mounted) {
+        shareLoaderShown = true;
+        unawaited(
+          showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            useRootNavigator: true,
+            builder: (BuildContext dialogContext) {
+              if (widget.isIOS) {
+                return const CupertinoAlertDialog(
+                  title: Text('Preparing Postman collection'),
+                  content: Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: CupertinoActivityIndicator(radius: 14),
+                  ),
+                );
+              }
+              return PopScope(
+                canPop: false,
+                child: AlertDialog(
+                  content: Row(
+                    children: <Widget>[
+                      const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          'Preparing Postman collection…',
+                          style: Theme.of(dialogContext).textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      shareFile = await PostmanCollectionHelper.writeShareCollectionJsonFile(
+        log: widget.log,
+        displayEndpoint: widget.displayEndpoint,
+      );
+
+      await SharePlus.instance.share(
+        ShareParams(files: <XFile>[XFile(shareFile.path)]),
+      );
+
+      final File toDelete = shareFile;
+      Future.delayed(const Duration(seconds: 30), () {
+        if (toDelete.existsSync()) {
+          try {
+            toDelete.deleteSync();
+          } catch (_) {}
+        }
+      });
+    } catch (e, st) {
+      log('aun_api_logger: share failed', error: e, stackTrace: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not share log. Please try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (shareLoaderShown && mounted) {
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (_) {}
+      }
+      _shareInProgress = false;
+    }
+
+    if (_isSlid) {
+      _toggleSlide();
+    }
+  }
+
   /// Swipe → Share: adaptive sheet to pick image with or without auth headers.
   Future<void> _showAdaptiveShareSheet() async {
     if (!mounted) return;
@@ -233,7 +331,7 @@ class _LogItemBlockState extends State<LogItemBlock>
         builder: (BuildContext ctx) => CupertinoActionSheet(
           title: const Text('Share log'),
           message: const Text(
-            'The image will include request headers and bodies. Choose whether auth tokens are included.',
+            'Image options include headers and bodies; choose whether auth tokens appear in the image. Postman export is a JSON file with full captured request data (including tokens).',
           ),
           actions: <Widget>[
             CupertinoActionSheetAction(
@@ -249,6 +347,15 @@ class _LogItemBlockState extends State<LogItemBlock>
                 _shareLog(withAuth: true);
               },
               child: const Text('Share full data (with tokens)'),
+            ),
+            CupertinoActionSheetAction(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _shareLogAsPostmanCollection();
+              },
+              child: const Text(
+                'Share as Postman collection (JSON, with tokens)',
+              ),
             ),
           ],
           cancelButton: CupertinoActionSheetAction(
@@ -288,7 +395,7 @@ class _LogItemBlockState extends State<LogItemBlock>
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
-                    'The image includes headers and bodies. Choose whether auth tokens are included.',
+                    'Image options include headers and bodies; choose whether auth tokens appear in the image. Postman export is a JSON file with full captured request data (including tokens).',
                     style: TextStyle(fontSize: 13, color: Colors.black54),
                   ),
                 ),
@@ -327,6 +434,24 @@ class _LogItemBlockState extends State<LogItemBlock>
                   onTap: () {
                     Navigator.pop(sheetContext);
                     _shareLog(withAuth: true);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.data_object_rounded,
+                    color: Colors.teal.shade700,
+                  ),
+                  title: const Text(
+                    'Postman collection (JSON)',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: const Text(
+                    'Collection v2.1 file for Postman Import — includes tokens.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _shareLogAsPostmanCollection();
                   },
                 ),
               ],

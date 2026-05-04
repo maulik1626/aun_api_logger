@@ -1,3 +1,19 @@
+## 2.3.0 - 2026-05-04
+
+### Added
+
+- **Postman Collection v2.1 export**: Swipe → Share on a day log row includes **Share as Postman collection (JSON, with tokens)** (iOS action sheet and Android bottom sheet). Generates a Postman **Import → Collection** JSON file with the full captured request: method, URL, headers (including auth), and raw body for POST, PUT, PATCH, and DELETE. Implemented in `lib/src/utils/postman_collection_helper.dart` with unit tests in `test/postman_collection_helper_test.dart` (including URL, header, and body edge cases).
+
+### Dependencies
+
+```yaml
+dependencies:
+  aun_api_logger:
+    git:
+      url: https://github.com/maulik1626/aun_api_logger.git
+      ref: v2.3.0
+```
+
 ## 2.2.1 - 2026-04-20
 
 ### Changed
